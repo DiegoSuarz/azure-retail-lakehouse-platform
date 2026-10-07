@@ -39,8 +39,8 @@ en ventanas de uso de Azure para controlar los costos.
 |---|---|---|
 | M1.1 | Repositorio y estructura inicial | Completado |
 | M1.2 | .gitignore y .env.example | Completado |
-| M1.3 | Documentación de diseño, presupuesto y roadmap | En progreso |
-| M1.4 | Entorno virtual y verificación de herramientas locales | Pendiente |
+| M1.3 | Documentación de diseño, presupuesto y roadmap | Completado |
+| M1.4 | Entorno virtual y verificación de herramientas locales | Completado |
 | M1.5 | Primer commit, publicación en GitHub y cierre | Pendiente |
 
 ## Dependencias principales
