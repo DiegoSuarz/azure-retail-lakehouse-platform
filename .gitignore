@@ -1,0 +1,43 @@
+# Variables locales y secretos
+.env
+.env.*
+!.env.example
+.secrets/
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Entornos virtuales
+.venv/
+venv/
+
+# Archivos generados por Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# Archivos locales de desarrollo
+.vscode/
+.idea/
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+
+# Datos y resultados generados
+data/
+outputs/
+logs/
+tmp/
+*.log
+
+# Estado local de herramientas
+.azure/
+.databrickscfg
