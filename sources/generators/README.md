@@ -10,8 +10,8 @@ Requiere Python 3.12 y utiliza únicamente la biblioteca estándar.
 
 ## Parámetros
 
-- --seed: semilla aleatoria; valor predeterminado 42.
-- --output-dir: carpeta de salida; valor predeterminado data/initial.
+- --seed: semilla aleatoria, valor predeterminado 42.
+- --output-dir: carpeta de salida, valor predeterminado data/initial.
 
 El generador rechaza una carpeta de salida que ya contiene archivos.
 
@@ -74,5 +74,6 @@ igualdad byte por byte de los seis archivos en Python 3.12.3.
 
 ## Estado
 
-Generación y validación local completadas.
-La carga en SQL Server todavía está pendiente.
+Generación, validación local y carga en SQL Server completadas.
+Los conteos e importes se reconciliaron antes del commit de la carga
+y mediante una consulta independiente posterior.

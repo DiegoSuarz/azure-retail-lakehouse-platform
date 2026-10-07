@@ -19,7 +19,7 @@ mantiene durante el desarrollo. Ese procedimiento aún está pendiente.
 
 | Archivo | Función |
 |---|---|
-| 001_create_database.sql | Crear la base; se detiene si ya existe |
+| 001_create_database.sql | Crear la base, se detiene si ya existe |
 | 002_create_tables.sql | Crear las cinco tablas dentro de una transacción |
 | 003_configure_users.sql | Crear usuarios ausentes y aplicar permisos |
 
@@ -101,4 +101,82 @@ El script 003 se ejecutó correctamente sobre los usuarios existentes.
 ## Estado
 
 La base, las tablas y los accesos están implementados.
-La generación y carga de datos sintéticos corresponde a M2.3.
+La generación y carga inicial de datos sintéticos se completó en M2.3.
+
+## Carga inicial de datos sintéticos
+
+Instalar las dependencias dentro del entorno virtual:
+
+    python -m pip install -r requirements.txt
+
+Generar y validar los archivos antes de la carga:
+
+    python sources/generators/generate_initial_data.py
+    python tests/generators/validate_initial_data.py
+
+Si data/initial ya contiene la generación validada, no repetir
+la generación sobre esa carpeta.
+
+Ejecutar el cargador desde la raíz del repositorio:
+
+    python sources/sqlserver/load_initial_data.py --host <host-accesible>
+
+El cargador utiliza SQL_SERVER_PASSWORD cuando está configurada;
+si falta, solicita la contraseña de retail_loader de forma oculta.
+Utiliza una transacción para las cinco tablas y rechaza tablas con datos.
+
+Antes de confirmar, reconcilia conteos, estados, importes y unidades
+contra el manifiesto. Si falla, revierte la transacción.
+
+Carga verificada con semilla 42:
+
+- categories: 6 registros.
+- products: 60 registros.
+- customers: 500 registros.
+- orders: 2000 registros.
+- order_items: 5862 registros.
+- Unidades totales: 14792.
+- Importe bruto total: PEN 21645086.45.
+- Descuento total: PEN 1667089.99.
+- Importe neto total: PEN 19977996.46.
+- Importe neto confirmado: PEN 15781257.30.
+- Unidades confirmadas: 11682.
+
+La transacción terminó con COMMIT y una consulta independiente
+posterior confirmó los totales.
+
+## Configuración local con .env
+
+.env contiene la configuración local y está excluido de Git.
+.env.example documenta las variables sin contraseñas reales.
+
+- SQL_SERVER_HOST y SQL_SERVER_PORT: dirección accesible desde WSL.
+- SQL_SERVER_DATABASE: TechRetail_OLTP.
+- SQL_SERVER_USER: retail_loader.
+- SQL_SERVER_PASSWORD: contraseña local del cargador.
+- SQL_SERVER_READER_USER: retail_reader.
+- SQL_SERVER_READER_PASSWORD: contraseña local de extracción.
+
+El cargador lee variables de entorno; no abre .env automáticamente.
+Para cargar la configuración y ejecutar una carga inicial:
+
+```bash
+(
+    set -e
+    set -a
+    source .env
+    set +a
+
+    python sources/sqlserver/load_initial_data.py
+)
+```
+
+.env debe contener asignaciones compatibles con Bash.
+Las contraseñas requieren el escapado correspondiente a esa sintaxis.
+Solo se debe cargar un archivo local de confianza.
+
+El cargador rechaza tablas que ya contienen datos.
+No ejecutar nuevamente para actualizar o reemplazar una carga existente.
+
+Las conexiones de ambos usuarios con la configuración de .env
+se verificaron mediante consultas de lectura sobre los 2000 pedidos.
