@@ -14,7 +14,7 @@ en ventanas de uso de Azure para controlar los costos.
 | Módulo | Alcance | Estado |
 |---|---|---|
 | M0 | Identidad, alcance, arquitectura, suscripción y presupuesto | Completado como diseño |
-| M1 | Repositorio, documentación y entorno local | En progreso |
+| M1 | Repositorio, documentación y entorno local | Completado |
 | M2 | SQL Server OLTP, datos sintéticos y contratos de fuentes | Pendiente |
 | M3 | ADLS Gen2 y organización del almacenamiento | Pendiente |
 | M4 | ADF, SHIR y fundamentos de orquestación | Pendiente |
@@ -41,7 +41,7 @@ en ventanas de uso de Azure para controlar los costos.
 | M1.2 | .gitignore y .env.example | Completado |
 | M1.3 | Documentación de diseño, presupuesto y roadmap | Completado |
 | M1.4 | Entorno virtual y verificación de herramientas locales | Completado |
-| M1.5 | Primer commit, publicación en GitHub y cierre | Pendiente |
+| M1.5 | Primer commit, publicación en GitHub y cierre | Completado |
 
 ## Dependencias principales
 
@@ -103,7 +103,7 @@ Un módulo se marcará como completado cuando:
 
 ## Estado de implementación
 
-Al crear esta hoja de ruta, el proyecto se encuentra en M1.
+M1 está completado. El siguiente módulo es M2: fuentes y contratos.
 La arquitectura está definida, pero las canalizaciones y capas
 de datos todavía no están implementadas.
 

@@ -54,7 +54,7 @@ controles de calidad y publicación para consumo analítico.
 
 ## Estado
 
-M0 completado como diseño. M1 en progreso.
+M0 completado como diseño. M1 completado. M2 pendiente.
 
 Los servicios y las canalizaciones descritos son la arquitectura
 prevista; todavía no están implementados en este proyecto.
