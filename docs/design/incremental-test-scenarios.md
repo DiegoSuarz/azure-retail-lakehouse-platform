@@ -116,6 +116,11 @@ en el módulo de SCD.
 
 ## Estado
 
-Escenarios definidos en M2.6.
-La generación de archivos y la validación de expectativas
-todavía están pendientes.
+Escenarios S01–S20 generados y comprobados localmente en M2.6.
+Las comprobaciones incluyen reconciliación del primer lote,
+simulación de orden y reprocesos, y anomalías deliberadas.
+
+La ejecución se documenta en
+[Generación incremental](../../sources/generators/INCREMENTAL.md).
+
+El procesamiento cloud y los históricos SCD siguen pendientes.
