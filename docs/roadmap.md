@@ -76,7 +76,7 @@ y diez horas de cómputo. Estas cantidades deberán ajustarse según
 el consumo y el avance real.
 
 El trabajo posterior de monitorización, Bicep y CI podrá requerir
-ejecuciones adicionales. Se estimará su costo antes de realizarlas, 
+ejecuciones adicionales. Se estimará su costo antes de realizarlas,
 no se considera incluido automáticamente en las dos ventanas.
 
 El detalle económico se encuentra en
