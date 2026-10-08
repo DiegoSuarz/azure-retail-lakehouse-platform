@@ -92,5 +92,6 @@ El proyecto dispone de un origen inicial reconciliado, contratos
 definidos y escenarios reproducibles para implementar la ingesta
 y el procesamiento posterior.
 
-El cierre de integración requiere incorporar estos cambios a main
-mediante pull request.
+M2 quedó integrado en main mediante squash merge.
+Commit de integración: aa2e36d.
+Las validaciones y los pendientes descritos conservan su alcance.

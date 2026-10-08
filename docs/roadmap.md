@@ -15,7 +15,7 @@ en ventanas de uso de Azure para controlar los costos.
 |---|---|---|
 | M0 | Identidad, alcance, arquitectura, suscripción y presupuesto | Completado como diseño |
 | M1 | Repositorio, documentación y entorno local | Completado |
-| M2 | SQL Server OLTP, datos sintéticos y contratos de fuentes | Validado, pendiente de integración |
+| M2 | SQL Server OLTP, datos sintéticos y contratos de fuentes | Completado |
 | M3 | ADLS Gen2 y organización del almacenamiento | Pendiente |
 | M4 | ADF, SHIR y fundamentos de orquestación | Pendiente |
 | M5 | Ingesta inicial y cargas a Bronze | Pendiente |
@@ -54,7 +54,7 @@ en ventanas de uso de Azure para controlar los costos.
 - La automatización programada requiere validar funcionamiento y costo.
 
 La orquestación de ADF evolucionará a lo largo de los módulos.
-M4 establecerá su base; las actividades de transformación y publicación
+M4 establecerá su base, las actividades de transformación y publicación
 se incorporarán cuando sus implementaciones estén disponibles.
 
 Los controles mínimos de auditoría, seguridad y costos se aplicarán
@@ -76,7 +76,7 @@ y diez horas de cómputo. Estas cantidades deberán ajustarse según
 el consumo y el avance real.
 
 El trabajo posterior de monitorización, Bicep y CI podrá requerir
-ejecuciones adicionales. Se estimará su costo antes de realizarlas;
+ejecuciones adicionales. Se estimará su costo antes de realizarlas,
 no se considera incluido automáticamente en las dos ventanas.
 
 El detalle económico se encuentra en
@@ -103,7 +103,7 @@ Un módulo se marcará como completado cuando:
 
 ## Estado de implementación
 
-M2 está implementado y validado localmente, pendiente de integración en main.
+M2 está completado e integrado en main.
 El siguiente módulo es M3: almacenamiento en ADLS Gen2.
 La arquitectura está definida, pero las canalizaciones y capas
 de datos todavía no están implementadas.
