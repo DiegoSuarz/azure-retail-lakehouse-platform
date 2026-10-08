@@ -36,11 +36,14 @@ Las rutas del intérprete y de pip deben pertenecer a .venv.
 
 ## Dependencias
 
-Todavía no se han incorporado dependencias del proyecto.
+Las dependencias se registran en requirements.txt.
 
-Se registrarán conforme se implementen los componentes.
-Las instalaciones se realizarán mediante python -m pip
-dentro del entorno virtual.
+Instalación dentro del entorno virtual:
+
+    python -m pip install -r requirements.txt
+
+La carga local en SQL Server utiliza pyodbc 5.3.0 y requiere
+ODBC Driver 18 for SQL Server instalado en el sistema.
 
 ## VS Code
 

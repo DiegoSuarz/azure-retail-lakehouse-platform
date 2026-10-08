@@ -6,7 +6,7 @@ Controlar el gasto del proyecto dentro del crédito disponible
 de Azure for Students.
 
 Las cantidades de este documento son estimaciones y asignaciones
-de planificación; no representan consumo medido.
+de planificación, no representan consumo medido.
 
 ## Límites y alertas
 
@@ -97,9 +97,9 @@ como una reserva adicional a los USD 80.
 | Etapa | Trabajo | Infraestructura prevista |
 |---|---|---|
 | Preparación | Repositorio, OLTP, datos sintéticos y código | Sin Databricks desplegado |
-| Ingesta | Carga inicial, API y archivos | Recursos de ingesta y almacenamiento; ejecuciones acotadas |
+| Ingesta | Carga inicial, API y archivos | Recursos de ingesta y almacenamiento, ejecuciones acotadas |
 | Ventana 1 | Silver, calidad, CDC y Delta | Hasta siete días de infraestructura y diez horas de cómputo |
-| Preparación intermedia | Correcciones y preparación de Gold/SCD | Trabajo local; retirada de infraestructura temporal |
+| Preparación intermedia | Correcciones y preparación de Gold/SCD | Trabajo local, retirada de infraestructura temporal |
 | Ventana 2 | Gold, SCD, time travel y pruebas integradas | Hasta siete días de infraestructura y diez horas de cómputo |
 | Consumo y cierre | Synapse, Power BI y evidencias | Consultas limitadas y retirada final |
 
