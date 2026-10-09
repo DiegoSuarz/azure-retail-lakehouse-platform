@@ -131,5 +131,6 @@ datos y publicar resultados con responsabilidades explícitas.
 
 ## Estado de cierre
 
-M3 implementado y validado para el alcance de almacenamiento.
-Cierre pendiente de integración en main mediante pull request.
+M3 completado para el alcance de almacenamiento e integrado en main.
+Commit de integración: f55124b.
+Los pendientes descritos conservan su alcance.

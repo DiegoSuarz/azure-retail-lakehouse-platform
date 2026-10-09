@@ -16,7 +16,7 @@ en ventanas de uso de Azure para controlar los costos.
 | M0 | Identidad, alcance, arquitectura, suscripción y presupuesto | Completado como diseño |
 | M1 | Repositorio, documentación y entorno local | Completado |
 | M2 | SQL Server OLTP, datos sintéticos y contratos de fuentes | Completado |
-| M3 | ADLS Gen2 y organización del almacenamiento | Validado, pendiente de integración |
+| M3 | ADLS Gen2 y organización del almacenamiento | Completado |
 | M4 | ADF, SHIR y fundamentos de orquestación | Pendiente |
 | M5 | Ingesta inicial y cargas a Bronze | Pendiente |
 | M6 | Reglas de calidad, validaciones y cuarentena | Pendiente |
@@ -104,7 +104,7 @@ Un módulo se marcará como completado cuando:
 ## Estado de implementación
 
 M2 está completado e integrado en main.
-M3 está implementado y validado, pendiente de integración en main.
+M3 está completado e integrado en main.
 El siguiente módulo es M4: ADF, SHIR y fundamentos de orquestación.
 La arquitectura está definida, pero las canalizaciones y capas
 de datos todavía no están implementadas.
