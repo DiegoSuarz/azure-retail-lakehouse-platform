@@ -17,7 +17,7 @@ en ventanas de uso de Azure para controlar los costos.
 | M1 | Repositorio, documentación y entorno local | Completado |
 | M2 | SQL Server OLTP, datos sintéticos y contratos de fuentes | Completado |
 | M3 | ADLS Gen2 y organización del almacenamiento | Completado |
-| M4 | ADF, SHIR y fundamentos de orquestación | Validado, pendiente de integración |
+| M4 | ADF, SHIR y fundamentos de orquestación | Completado |
 | M5 | Ingesta inicial y cargas a Bronze | Pendiente |
 | M6 | Reglas de calidad, validaciones y cuarentena | Pendiente |
 | M7 | Transformaciones PySpark y tablas Delta en Silver | Pendiente |
@@ -105,7 +105,7 @@ Un módulo se marcará como completado cuando:
 
 M2 está completado e integrado en main.
 M3 está completado e integrado en main.
-M4 está validado, pendiente de integración en main.
+M4 está completado e integrado en main.
 El siguiente módulo es M5: ingesta inicial y cargas a Bronze.
 La conectividad integrada de ADF está implementada.
 Las cargas completas y las capas de procesamiento siguen pendientes.
