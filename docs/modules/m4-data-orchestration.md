@@ -138,5 +138,5 @@ Bronze, Silver, Gold y publicación se incorporarán posteriormente.
 
 Prueba integrada validada.
 Configuración exportada y requisitos de reconstrucción documentados.
-Cierre del módulo en progreso.
-M4 todavía no está cerrado ni integrado en main.
+M4 validado para el alcance de conectividad y orquestación básica.
+Cierre pendiente de integración en main mediante pull request.

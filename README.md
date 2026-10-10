@@ -54,10 +54,11 @@ controles de calidad y publicación para consumo analítico.
 
 ## Estado
 
-M0 completado como diseño. M1, M2 y M3 completados. M4 pendiente.
+M0 completado como diseño. M1, M2 y M3 completados. M4 validado, pendiente de integración.
 
 El origen SQL Server y el almacenamiento en ADLS Gen2 están implementados.
-Las canalizaciones de ADF, las transformaciones y el consumo analítico
+La conectividad SQL Server–ADLS mediante ADF está validada.
+Las cargas completas, las transformaciones y el consumo analítico
 todavía están pendientes.
 
 La disponibilidad y los costos pendientes se verificarán antes
