@@ -223,4 +223,5 @@ con mecanismos compatibles con Delta.
 ## Estado
 
 Diseño definido en M3.1.
-La cuenta, los contenedores y los directorios todavía no están creados.
+La cuenta starlpdevdiego01 y los seis contenedores están creados.
+Las rutas de datos se materializarán conforme se ejecuten las cargas.
