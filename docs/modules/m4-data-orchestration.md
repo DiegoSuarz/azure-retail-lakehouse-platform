@@ -138,5 +138,7 @@ Bronze, Silver, Gold y publicación se incorporarán posteriormente.
 
 Prueba integrada validada.
 Configuración exportada y requisitos de reconstrucción documentados.
-M4 validado para el alcance de conectividad y orquestación básica.
-Cierre pendiente de integración en main mediante pull request.
+M4 completado para el alcance de conectividad y orquestación básica.
+Integrado en main mediante el pull request #7.
+Commit de integración: b635bbd.
+Los pendientes descritos conservan su alcance.
