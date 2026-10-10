@@ -1,0 +1,24 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "value": "adf-arlp-dev-diego01"
+        },
+        "ls_key_vault_properties_typeProperties_baseUrl": {
+            "value": "https://kv-arlp-dev-diego01.vault.azure.net/"
+        },
+        "ls_sqlserver_local_properties_typeProperties_server": {
+            "value": "localhost,1433"
+        },
+        "ls_sqlserver_local_properties_typeProperties_database": {
+            "value": "TechRetail_OLTP"
+        },
+        "ls_sqlserver_local_properties_typeProperties_userName": {
+            "value": "retail_reader"
+        },
+        "ls_adls_gen2_properties_typeProperties_url": {
+            "value": "https://starlpdevdiego01.dfs.core.windows.net/"
+        }
+    }
+}
