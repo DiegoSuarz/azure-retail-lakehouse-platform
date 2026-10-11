@@ -161,8 +161,37 @@ Las publicaciones y comprobaciones generaron escrituras y lecturas,
 además de transferencia cuando corresponda.
 Los archivos conservados generan consumo de capacidad.
 
-El costo real de M5 todavía no se ha reconciliado con Cost Management.
+Cost Management se revisó el 2026-10-11 en Azure Portal.
+La vista de recursos estaba filtrada a Azure for Students y rg-arlp-dev,
+para octubre de 2026.
+
+| Recurso | Costo mostrado USD |
+|---|---:|
+| Data Factory | 0.02 |
+| Storage account | < 0.01 |
+| Key Vault | < 0.01 |
+| Total mostrado del grupo | 0.02 |
+
+Los valores están redondeados y sujetos a actualización.
+El total incluye los recursos compartidos de M3, M4 y M5.
+No constituye el costo exclusivo de M5 ni el crédito restante.
+
+La revisión es provisional: pueden faltar consumos recientes.
+La reconciliación definitiva por módulo permanece pendiente.
 No se desplegó Databricks para este módulo.
+
+## Revisión operativa
+
+Comprobaciones realizadas en Azure Portal el 2026-10-11:
+
+- Presupuesto mensual de USD 20 presente en Azure for Students.
+- Consumo evaluado mostrado: USD 0.02, equivalente a 0.11%.
+- ADF sin triggers configurados.
+- ADF sin sesiones activas de Data Flow Debug.
+
+Los importes son provisionales y están sujetos a actualización.
+Se conservan las entradas verificadas de Bronze y los servicios
+compartidos para continuar los siguientes módulos.
 
 ## Aprendizajes y puntos clave
 
