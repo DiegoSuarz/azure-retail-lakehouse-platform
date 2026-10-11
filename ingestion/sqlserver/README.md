@@ -37,3 +37,25 @@ Esta referencia local no sustituye el manifiesto final de Bronze.
 
 Captura del origen implementada y comprobada.
 Validación de Parquet y generación del manifiesto pendientes.
+
+## Validación de Parquet
+
+tests/ingestion/validate_initial_parquet.py compara los archivos
+descargados con las referencias del origen antes y después.
+
+Comprueba columnas, tipos compatibles, conteos, claves,
+todos los valores y relaciones entre las cinco entidades.
+
+Genera un informe local únicamente cuando los controles pasan.
+Este informe no sustituye el manifiesto publicado en Bronze.
+
+Pruebas locales realizadas:
+
+- Parquet con contenido idéntico: aceptados.
+- Producto modificado, conservando el conteo: rechazado.
+- Caso inválido: sin informe de aceptación.
+
+Los archivos de prueba y la referencia posterior simulada
+se crearon en una carpeta temporal y se eliminaron al terminar.
+
+La validación de los archivos reales de ADF sigue pendiente.
