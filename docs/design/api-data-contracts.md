@@ -308,5 +308,7 @@ Contrato definido en M2.5.
 Se verificaron respuestas de productos, categorías y tipo de cambio
 desde el entorno local.
 
-La extracción persistente, el archivo de mapeo y las transformaciones
-todavía no están implementados.
+Las extracciones de DummyJSON y BCRPData están publicadas y verificadas
+en Bronze, con respuestas originales, metadatos y manifiestos.
+El archivo de mapeo contiene seis asociaciones educativas validadas.
+Las transformaciones y la incorporación del mapeo a Silver siguen pendientes.
