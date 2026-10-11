@@ -36,7 +36,7 @@ Esta referencia local no sustituye el manifiesto final de Bronze.
 ## Estado
 
 Captura del origen implementada y comprobada.
-Validación de Parquet y generación del manifiesto pendientes.
+Carga inicial validada y manifiesto publicado en Bronze.
 
 ## Validación de Parquet
 
@@ -58,7 +58,8 @@ Pruebas locales realizadas:
 Los archivos de prueba y la referencia posterior simulada
 se crearon en una carpeta temporal y se eliminaron al terminar.
 
-La validación de los archivos reales de ADF sigue pendiente.
+Los cinco Parquet reales de ADF se validaron satisfactoriamente
+contra las referencias de SQL Server antes y después.
 
 ## Manifiesto de extracción
 
@@ -82,4 +83,42 @@ Genera manifest.json en la raíz local de la ejecución.
 No sobrescribe un manifiesto existente ni publica archivos en Azure.
 
 Se comprobó el rechazo de metadatos incompletos sin generar manifiesto.
-La generación con evidencias reales y la publicación siguen pendientes.
+El manifiesto se generó con evidencias reales, se publicó en Bronze
+y se verificó mediante descarga y comparación byte por byte.
+
+## Ejecución inicial aceptada
+
+- Pipeline: pl_ingest_sqlserver_initial.
+- RunId: 89d277f4-ddee-49a2-9d9f-588efacf9788.
+- Inicio UTC: 2026-10-11T01:32:05Z.
+- Fin UTC: 2026-10-11T01:34:25Z.
+- Estado de ADF: Succeeded.
+- Cinco actividades Copy con consistencia Verified.
+- Ventana sin escrituras confirmada por el operador.
+
+| Entidad | Filas validadas | Archivos Parquet |
+|---|---:|---:|
+| categories | 6 | 1 |
+| products | 60 | 1 |
+| customers | 500 | 1 |
+| orders | 2000 | 1 |
+| order_items | 5862 | 1 |
+| Total | 8428 | 5 |
+
+Las referencias del origen antes y después coinciden.
+Los Parquet conservan todos los valores del origen, con tipos
+compatibles, claves y relaciones válidas.
+
+Una segunda descarga confirmó que los cinco archivos cloud
+coinciden byte por byte con los archivos validados.
+
+El manifiesto está publicado en bronze, en:
+
+    sqlserver/techretail_oltp/initial/run_id=89d277f4-ddee-49a2-9d9f-588efacf9788/manifest.json
+
+Su publicación impidió sobrescribir un manifiesto existente.
+La copia publicada se descargó y coincidió byte por byte con la local.
+
+La aceptación utilizó scripts locales y publicación mediante CLI.
+El pipeline de ADF todavía no automatiza estas comprobaciones
+ni la publicación del manifiesto.

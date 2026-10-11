@@ -154,4 +154,7 @@ Esta etapa no requiere desplegar Databricks.
 Plan definido en M5.1.
 Datasets y pipeline publicados en ADF.
 Referencia local del origen capturada y controles de M2 verificados.
-Ejecución completa, validación de Parquet y manifiesto pendientes.
+Carga inicial ejecutada y validada contra las referencias del origen.
+Los cinco Parquet cloud coinciden byte por byte con los validados.
+Manifiesto publicado en Bronze y verificado contra la copia local.
+Ejecución aceptada: 89d277f4-ddee-49a2-9d9f-588efacf9788.
