@@ -53,7 +53,7 @@ El conjunto sintético inicial tiene como corte exclusivo:
 
     2026-10-01T00:00:00.000Z
 
-Este corte describe los datos generados; no representa
+Este corte describe los datos generados, no representa
 el instante real de extracción ni una marca de agua técnica.
 
 Se registrarán por separado el inicio y el fin de extracción en UTC.
@@ -152,4 +152,6 @@ Esta etapa no requiere desplegar Databricks.
 ## Estado
 
 Plan definido en M5.1.
-Datasets, pipeline y manifiesto de carga completa pendientes.
+Datasets y pipeline publicados en ADF.
+Referencia local del origen capturada y controles de M2 verificados.
+Ejecución completa, validación de Parquet y manifiesto pendientes.
