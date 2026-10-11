@@ -59,3 +59,27 @@ Los archivos de prueba y la referencia posterior simulada
 se crearon en una carpeta temporal y se eliminaron al terminar.
 
 La validación de los archivos reales de ADF sigue pendiente.
+
+## Manifiesto de extracción
+
+build_initial_manifest.py utiliza las referencias del origen,
+los Parquet descargados y los metadatos reales de ADF.
+
+La carpeta descargada debe llamarse run_id=<RunId> y contener
+los directorios de las cinco entidades.
+
+El generador exige:
+
+- Pipeline y cinco copias con estado Succeeded.
+- Identificadores y fechas de ejecución válidos.
+- Capturas del origen que delimiten la extracción.
+- Confirmación de la ventana sin escrituras.
+- Verificación de consistencia de Copy con resultado Verified.
+- Validación local de los Parquet satisfactoria.
+- Conteos de filas y archivos coincidentes con ADF.
+
+Genera manifest.json en la raíz local de la ejecución.
+No sobrescribe un manifiesto existente ni publica archivos en Azure.
+
+Se comprobó el rechazo de metadatos incompletos sin generar manifiesto.
+La generación con evidencias reales y la publicación siguen pendientes.
