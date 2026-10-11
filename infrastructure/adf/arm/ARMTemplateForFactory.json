@@ -33,17 +33,6 @@
     },
     "resources": [
         {
-            "name": "[concat(parameters('factoryName'), '/shir-arlp-dev-local')]",
-            "type": "Microsoft.DataFactory/factories/integrationRuntimes",
-            "apiVersion": "2018-06-01",
-            "properties": {
-                "type": "SelfHosted",
-                "description": "Acceso a SQL Server local para la ingesta de TechRetail_OLTP.",
-                "typeProperties": {}
-            },
-            "dependsOn": []
-        },
-        {
             "name": "[concat(parameters('factoryName'), '/ls_key_vault')]",
             "type": "Microsoft.DataFactory/factories/linkedServices",
             "apiVersion": "2018-06-01",
@@ -107,6 +96,17 @@
             "dependsOn": [
                 "[concat(variables('factoryId'), '/integrationRuntimes/shir-arlp-dev-local')]"
             ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/shir-arlp-dev-local')]",
+            "type": "Microsoft.DataFactory/factories/integrationRuntimes",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "type": "SelfHosted",
+                "description": "Acceso a SQL Server local para la ingesta de TechRetail_OLTP.",
+                "typeProperties": {}
+            },
+            "dependsOn": []
         },
         {
             "name": "[concat(parameters('factoryName'), '/ds_sqlserver_categories')]",
@@ -180,6 +180,76 @@
             ]
         },
         {
+            "name": "[concat(parameters('factoryName'), '/ds_sqlserver_table')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "ls_sqlserver_local",
+                    "type": "LinkedServiceReference"
+                },
+                "parameters": {
+                    "p_schema_name": {
+                        "type": "string",
+                        "defaultValue": "dbo"
+                    },
+                    "p_table_name": {
+                        "type": "string",
+                        "defaultValue": "categories"
+                    }
+                },
+                "annotations": [],
+                "type": "SqlServerTable",
+                "schema": [],
+                "typeProperties": {
+                    "schema": {
+                        "value": "@dataset().p_schema_name",
+                        "type": "Expression"
+                    },
+                    "table": {
+                        "value": "@dataset().p_table_name",
+                        "type": "Expression"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/ls_sqlserver_local')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/ds_adls_bronze_parquet')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "ls_adls_gen2",
+                    "type": "LinkedServiceReference"
+                },
+                "parameters": {
+                    "p_directory": {
+                        "type": "string"
+                    }
+                },
+                "annotations": [],
+                "type": "Parquet",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "folderPath": {
+                            "value": "@dataset().p_directory",
+                            "type": "Expression"
+                        },
+                        "fileSystem": "bronze"
+                    },
+                    "compressionCodec": "snappy"
+                },
+                "schema": []
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/ls_adls_gen2')]"
+            ]
+        },
+        {
             "name": "[concat(parameters('factoryName'), '/pl_connectivity_sqlserver_adls')]",
             "type": "Microsoft.DataFactory/factories/pipelines",
             "apiVersion": "2018-06-01",
@@ -243,11 +313,121 @@
                 "policy": {
                     "elapsedTimeMetric": {}
                 },
-                "annotations": []
+                "annotations": [],
+                "lastPublishTime": "2026-10-10T16:55:54Z"
             },
             "dependsOn": [
                 "[concat(variables('factoryId'), '/datasets/ds_sqlserver_categories')]",
                 "[concat(variables('factoryId'), '/datasets/ds_adls_categories_smoke_test')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/pl_ingest_sqlserver_initial')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "activities": [
+                    {
+                        "name": "for_each_table",
+                        "type": "ForEach",
+                        "dependsOn": [],
+                        "userProperties": [],
+                        "typeProperties": {
+                            "items": {
+                                "value": "@pipeline().parameters.p_tables",
+                                "type": "Expression"
+                            },
+                            "isSequential": true,
+                            "activities": [
+                                {
+                                    "name": "copy_sqlserver_table_to_bronze",
+                                    "type": "Copy",
+                                    "dependsOn": [],
+                                    "policy": {
+                                        "timeout": "0.00:10:00",
+                                        "retry": 0,
+                                        "retryIntervalInSeconds": 30,
+                                        "secureOutput": false,
+                                        "secureInput": false
+                                    },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "source": {
+                                            "type": "SqlServerSource",
+                                            "queryTimeout": "02:00:00",
+                                            "partitionOption": "None"
+                                        },
+                                        "sink": {
+                                            "type": "ParquetSink",
+                                            "storeSettings": {
+                                                "type": "AzureBlobFSWriteSettings"
+                                            },
+                                            "formatSettings": {
+                                                "type": "ParquetWriteSettings"
+                                            }
+                                        },
+                                        "enableStaging": false,
+                                        "validateDataConsistency": true,
+                                        "translator": {
+                                            "type": "TabularTranslator",
+                                            "typeConversion": true,
+                                            "typeConversionSettings": {
+                                                "allowDataTruncation": false,
+                                                "treatBooleanAsNumber": false
+                                            }
+                                        }
+                                    },
+                                    "inputs": [
+                                        {
+                                            "referenceName": "ds_sqlserver_table",
+                                            "type": "DatasetReference",
+                                            "parameters": {
+                                                "p_schema_name": "dbo",
+                                                "p_table_name": {
+                                                    "value": "@item()",
+                                                    "type": "Expression"
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "outputs": [
+                                        {
+                                            "referenceName": "ds_adls_bronze_parquet",
+                                            "type": "DatasetReference",
+                                            "parameters": {
+                                                "p_directory": {
+                                                    "value": "@concat('sqlserver/techretail_oltp/initial/run_id=', pipeline().RunId, '/', item(), '/')",
+                                                    "type": "Expression"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "policy": {
+                    "elapsedTimeMetric": {}
+                },
+                "parameters": {
+                    "p_tables": {
+                        "type": "array",
+                        "defaultValue": [
+                            "categories",
+                            "products",
+                            "customers",
+                            "orders",
+                            "order_items"
+                        ]
+                    }
+                },
+                "annotations": [],
+                "lastPublishTime": "2026-10-10T22:58:29Z"
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/datasets/ds_sqlserver_table')]",
+                "[concat(variables('factoryId'), '/datasets/ds_adls_bronze_parquet')]"
             ]
         }
     ]

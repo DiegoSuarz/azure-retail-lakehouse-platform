@@ -18,7 +18,7 @@ en ventanas de uso de Azure para controlar los costos.
 | M2 | SQL Server OLTP, datos sintéticos y contratos de fuentes | Completado |
 | M3 | ADLS Gen2 y organización del almacenamiento | Completado |
 | M4 | ADF, SHIR y fundamentos de orquestación | Completado |
-| M5 | Ingesta inicial y cargas a Bronze | Pendiente |
+| M5 | Ingesta inicial y cargas a Bronze | Validado, pendiente de integración |
 | M6 | Reglas de calidad, validaciones y cuarentena | Pendiente |
 | M7 | Transformaciones PySpark y tablas Delta en Silver | Pendiente |
 | M8 | CDC simulado, incrementales e idempotencia | Pendiente |
@@ -106,9 +106,10 @@ Un módulo se marcará como completado cuando:
 M2 está completado e integrado en main.
 M3 está completado e integrado en main.
 M4 está completado e integrado en main.
-El siguiente módulo es M5: ingesta inicial y cargas a Bronze.
-La conectividad integrada de ADF está implementada.
-Las cargas completas y las capas de procesamiento siguen pendientes.
+M5 está validado, pendiente de integración en main.
+SQL Server, lotes sintéticos y API disponen de entradas verificadas en Bronze.
+El siguiente módulo es M6: reglas de calidad, validaciones y cuarentena.
+Las capas de procesamiento y el consumo analítico siguen pendientes.
 
 Las comprobaciones de disponibilidad y costos pendientes de M0
 se resolverán antes de los despliegues correspondientes.
@@ -118,3 +119,4 @@ se resolverán antes de los despliegues correspondientes.
 - [M2 — Fuentes y contratos](modules/m2-source-system.md)
 - [M3 — Almacenamiento del Lakehouse](modules/m3-lake-storage.md)
 - [M4 — ADF, SHIR y fundamentos de orquestación](modules/m4-data-orchestration.md)
+- [M5 — Ingesta inicial y cargas a Bronze](modules/m5-bronze-ingestion.md)
