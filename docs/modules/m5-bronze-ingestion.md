@@ -229,5 +229,7 @@ sin repetir las extracciones ya aceptadas.
 
 ## Estado de cierre
 
-M5 validado para el alcance de ingesta y preservación en Bronze.
-Cierre pendiente de integración en main mediante pull request.
+M5 completado para el alcance de ingesta y preservación en Bronze.
+Integrado en main mediante el pull request #9.
+Commit de integración: 3e44f99.
+Los pendientes y limitaciones descritos conservan su alcance.

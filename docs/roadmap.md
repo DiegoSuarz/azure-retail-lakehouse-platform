@@ -18,7 +18,7 @@ en ventanas de uso de Azure para controlar los costos.
 | M2 | SQL Server OLTP, datos sintéticos y contratos de fuentes | Completado |
 | M3 | ADLS Gen2 y organización del almacenamiento | Completado |
 | M4 | ADF, SHIR y fundamentos de orquestación | Completado |
-| M5 | Ingesta inicial y cargas a Bronze | Validado, pendiente de integración |
+| M5 | Ingesta inicial y cargas a Bronze | Completado |
 | M6 | Reglas de calidad, validaciones y cuarentena | Pendiente |
 | M7 | Transformaciones PySpark y tablas Delta en Silver | Pendiente |
 | M8 | CDC simulado, incrementales e idempotencia | Pendiente |
@@ -106,7 +106,7 @@ Un módulo se marcará como completado cuando:
 M2 está completado e integrado en main.
 M3 está completado e integrado en main.
 M4 está completado e integrado en main.
-M5 está validado, pendiente de integración en main.
+M5 está completado e integrado en main.
 SQL Server, lotes sintéticos y API disponen de entradas verificadas en Bronze.
 El siguiente módulo es M6: reglas de calidad, validaciones y cuarentena.
 Las capas de procesamiento y el consumo analítico siguen pendientes.

@@ -54,8 +54,8 @@ controles de calidad y publicación para consumo analítico.
 
 ## Estado
 
-M0 completado como diseño. M1, M2, M3 y M4 completados.
-M5 validado, pendiente de integración.
+M0 completado como diseño. M1, M2, M3, M4 y M5 completados.
+M6 pendiente.
 
 El origen SQL Server y el almacenamiento en ADLS Gen2 están implementados.
 La carga inicial de SQL Server mediante ADF está validada en Bronze.
