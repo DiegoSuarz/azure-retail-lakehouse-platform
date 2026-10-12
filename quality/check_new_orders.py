@@ -29,6 +29,7 @@ SCHEMA = pa.schema([
     pa.field("source_file", pa.string()),
     pa.field("record_number", pa.int64()),
     pa.field("business_key_json", pa.string()),
+    pa.field("reference_content_json", pa.string()),
     pa.field("raw_record", pa.string()),
     pa.field("status", pa.string()),
     pa.field("errors", pa.list_(ERROR_TYPE)),
@@ -41,7 +42,7 @@ def write_quarantine(output, result, processing_id, ingestion_id, evaluated):
     for entity, summary in result["entities"].items():
         rejected = [
             record for record in summary["records"]
-            if record["status"] == "rejected"
+            if record["status"] in {"rejected", "conflict"}
         ]
         if not rejected:
             continue
@@ -57,13 +58,14 @@ def write_quarantine(output, result, processing_id, ingestion_id, evaluated):
             "business_key_json": json.dumps(
                 record["business_key"], sort_keys=True,
             ),
+            "reference_content_json": record.get("reference_content_json"),
             "raw_record": record["raw_record"],
             "status": record["status"],
             "errors": record["errors"],
             "evaluated_at": evaluated,
         } for record in rejected]
 
-        path = output / f"{entity}_rejected.parquet"
+        path = output / f"{entity}_quarantine.parquet"
         pq.write_table(
             pa.Table.from_pylist(rows, schema=SCHEMA),
             path, compression="snappy",
@@ -106,7 +108,7 @@ def main():
         "ingestion_run_id": args.ingestion_run_id,
         "processing_run_id": processing_id,
         "evaluated_at": evaluated.isoformat(),
-        "scope": "new_orders_only",
+        "scope": "orders_csv_with_initial_reference",
         "status": "blocked",
         "records_processed": None,
         "errors": [],
@@ -124,7 +126,7 @@ def main():
             "message": str(error),
         })
     except ValueError as error:
-        # La reutilización de claves todavía requiere otro evaluador.
+        # Las entradas sin pedidos CSV quedan fuera de este evaluador.
         raise SystemExit(f"ALCANCE NO EVALUADO: {error}")
 
     output.mkdir(parents=True, exist_ok=False)
@@ -132,10 +134,13 @@ def main():
     if result is not None:
         summaries = {}
         for entity, summary in result["entities"].items():
-            if summary["read"] != summary["accepted"] + summary["rejected"]:
+            if summary["read"] != sum(
+                summary[key] for key in ("accepted", "rejected", "conflict", "duplicate")
+            ):
                 raise RuntimeError(f"Reconciliación incorrecta: {entity}")
             summaries[entity] = {
-                key: summary[key] for key in ("read", "accepted", "rejected")
+                key: summary[key]
+                for key in ("read", "accepted", "rejected", "conflict", "duplicate")
             }
 
         report.update({
@@ -162,7 +167,7 @@ def main():
         print(f"{entity}: {summary}")
     print(f"ARCHIVOS DE CUARENTENA: {len(report['quarantine_files'])}")
     print(f"INFORME: {output / 'report.json'}")
-    print("ALCANCE: pedidos nuevos; no publica en Azure ni modifica Silver.")
+    print("ALCANCE: pedidos CSV contra referencia inicial; no publica en Azure ni modifica Silver.")
     return 1 if result is None else 0
 
 

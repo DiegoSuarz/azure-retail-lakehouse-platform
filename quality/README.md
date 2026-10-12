@@ -51,7 +51,8 @@ Los informes de prueba se generaron en una carpeta temporal y se eliminaron.
 
 Validación de transporte implementada y comprobada con esos casos.
 Reglas de pedidos CSV nuevos y cuarentena Parquet local implementadas.
-Comparación de claves existentes, eventos y controles de API pendientes.
+Comparación de pedidos existentes implementada y comprobada.
+Eventos y controles de API pendientes.
 
 ## Calidad de pedidos nuevos
 
@@ -78,10 +79,12 @@ En pruebas locales sin ingesta, ese campo permanece nulo.
 completed_for_scope indica que terminó la evaluación de pedidos nuevos,
 aunque existan rechazos. No declara aceptación completa del lote.
 
-El informe reconcilia registros leídos, aceptados y rechazados.
+El informe reconcilia registros leídos, aceptados, rechazados,
+en conflicto y duplicados.
 Los eventos JSONL se contabilizan como no evaluados en este alcance.
 
-Solo se generan Parquet para entidades con registros rechazados.
+Solo se generan Parquet para entidades con registros rechazados
+o en conflicto.
 Conservan contenido original, clave, archivo, número de registro,
 identificadores, fecha UTC y lista de motivos.
 
@@ -95,7 +98,7 @@ La cuarentena se guarda localmente; no se publica aún en Azure.
 
 ## Pruebas reutilizables
 
-    python tests/quality/test_new_orders.py
+    python -m unittest discover -s tests/quality -p 'test_*.py' -v
 
 Resultados comprobados:
 
@@ -106,3 +109,30 @@ Resultados comprobados:
 - Contenido, motivos, hashes y conteos de los Parquet verificados.
 
 Las salidas de prueba se crean en carpetas temporales y se eliminan.
+
+## Pedidos existentes y reprocesos
+
+La comparación utiliza la referencia inicial y evalúa la cabecera
+y el conjunto completo de líneas.
+
+- Contenido equivalente y sin otros errores: duplicate.
+- Contenido diferente o entrega incompatible: conflict.
+- Las líneas de un pedido en conflicto quedan rechazadas por dependencia.
+
+Una repetición completa equivalente no se interpreta como pedido nuevo.
+Por ello, su fecha anterior al corte no impide reconocer el duplicado.
+En un conflicto como S19 se conservan DQ006 y DQ009.
+
+La cuarentena incluye reference_content_json cuando existe una
+comparación con la versión original.
+
+Pruebas adicionales realizadas:
+
+- S19: una cabecera en conflicto y cuatro líneas rechazadas.
+- Repetición idéntica: cinco registros duplicados y sin cuarentena.
+- Línea modificada o ausente: conflicto, sin registros aceptados.
+- Archivos de referencia sin modificaciones.
+
+Estas comprobaciones son locales contra la referencia inicial.
+No implementan todavía idempotencia persistente entre ejecuciones
+ni aplican actualizaciones al estado vigente.

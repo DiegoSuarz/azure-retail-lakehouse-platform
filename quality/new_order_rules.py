@@ -64,18 +64,12 @@ def evaluate_new_orders(directory, reference):
     )
     customer_ids = {int(row["customer_id"]) for row in reference["customers"]}
     product_ids = {int(row["product_id"]) for row in reference["products"]}
-    existing_ids = {int(row["order_id"]) for row in reference["orders"]}
-
-    # Esta etapa no debe aceptar claves existentes sin compararlas.
-    reused = {
-        record["_values"]["order_id"] for record in orders
-        if record["_values"]["order_id"] in existing_ids
+    existing_orders = {
+        int(row["order_id"]): row for row in reference["orders"]
     }
-    if reused:
-        raise ValueError(
-            "Comparación con pedidos existentes pendiente para las claves: "
-            + ", ".join(map(str, sorted(reused)))
-        )
+    existing_items = {}
+    for row in reference["order_items"]:
+        existing_items.setdefault(int(row["order_id"]), []).append(row)
 
     order_counts = Counter(
         record["_values"]["order_id"] for record in orders
@@ -115,6 +109,60 @@ def evaluate_new_orders(directory, reference):
         if identifier is not None and identifier > 0:
             grouped_items.setdefault(identifier, []).append(record)
 
+    # Compara el pedido completo contra la referencia inicial.
+    for record in orders:
+        identifier = record["_values"]["order_id"]
+        if identifier not in existing_orders or order_counts[identifier] != 1:
+            continue
+
+        original = existing_orders[identifier]
+        original_lines = existing_items.get(identifier, [])
+        lines = grouped_items.get(identifier, [])
+        baseline_order = parse_order(original)[0]
+        baseline_lines = {
+            int(row["line_number"]): parse_item(row)[0]
+            for row in original_lines
+        }
+        incoming_lines = {
+            line["_values"]["line_number"]: line["_values"]
+            for line in lines
+        }
+        same_content = (
+            record["_values"] == baseline_order
+            and len(lines) == len(incoming_lines)
+            and incoming_lines == baseline_lines
+        )
+
+        cutoff_message = "Pedido nuevo anterior al corte"
+        other_errors = [
+            error for error in record["errors"]
+            if not (
+                error["code"] == "DQ009"
+                and error["field"] == "created_at"
+                and error["message"] == cutoff_message
+            )
+        ]
+
+        record["reference_content_json"] = json.dumps({
+            "order": original,
+            "order_items": original_lines,
+        }, ensure_ascii=False, sort_keys=True)
+
+        if same_content and not other_errors and not any(line["errors"] for line in lines):
+            # Una repetición completa no se interpreta como una inserción nueva.
+            record["errors"] = []
+            record["_classification"] = "duplicate"
+            for line in lines:
+                line["_classification"] = "duplicate"
+        else:
+            record["_classification"] = "conflict"
+            issue(
+                record["errors"], "DQ006", "order_id",
+                "Pedido existente con contenido diferente o entrega incompatible",
+            )
+            for line in lines:
+                line["reference_content_json"] = record["reference_content_json"]
+
     for record in orders:
         identifier = record["_values"]["order_id"]
         lines = grouped_items.get(identifier, []) if identifier is not None else []
@@ -148,19 +196,23 @@ def evaluate_new_orders(directory, reference):
             record["business_key"] = {"order_id": values["order_id"]}
             if entity == "order_items":
                 record["business_key"]["line_number"] = values["line_number"]
-            record["status"] = "rejected" if record["errors"] else "accepted"
+            record["status"] = record.pop(
+                "_classification", "rejected" if record["errors"] else "accepted",
+            )
 
-        accepted = sum(record["status"] == "accepted" for record in records)
+        classifications = Counter(record["status"] for record in records)
         result[entity] = {
             "read": len(records),
-            "accepted": accepted,
-            "rejected": len(records) - accepted,
+            **{
+                status: classifications[status]
+                for status in ("accepted", "rejected", "conflict", "duplicate")
+            },
             "records": records,
         }
 
     return {
         "batch_id": batch_id,
-        "scope": "new_orders_only",
+        "scope": "orders_csv_with_initial_reference",
         "events_evaluated": False,
         "event_count_not_evaluated": counts.get("changes.jsonl", 0),
         "entities": result,

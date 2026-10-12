@@ -50,7 +50,7 @@ class NewOrderQualityTests(unittest.TestCase):
             for entity in ("orders", "order_items"):
                 self.assertEqual(
                     report["entities"][entity],
-                    {"read": 2, "accepted": 2, "rejected": 0},
+                    {"read": 2, "accepted": 2, "rejected": 0, "conflict": 0, "duplicate": 0},
                 )
 
     def test_invalid_order_is_excluded_completely(self):
@@ -70,7 +70,7 @@ class NewOrderQualityTests(unittest.TestCase):
                     for entity in ("orders", "order_items"):
                         self.assertEqual(
                             report["entities"][entity],
-                            {"read": 2, "accepted": 1, "rejected": 1},
+                            {"read": 2, "accepted": 1, "rejected": 1, "conflict": 0, "duplicate": 0},
                         )
 
                     for metadata in report["quarantine_files"]:
