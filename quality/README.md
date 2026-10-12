@@ -193,3 +193,29 @@ Todos los casos generan un informe blocked, sin procesar registros
 de negocio ni modificar las entradas.
 
 La suite conjunta superó nueve pruebas.
+
+## Reglas de registros de API
+
+api_record_rules.py evalúa productos de DummyJSON y valores de BCRPData.
+
+DQ014 comprueba identificadores, títulos, categorías, campos numéricos,
+rating, stock y tipos de los textos opcionales.
+
+Los opcionales ausentes se representan como nulos.
+La moneda externa permanece nula.
+El contrato actual no establece un mínimo para external_price.
+
+DQ015 exige tasas textuales y valores numéricos positivos.
+Los valores vacíos, no numéricos o no finitos se conservan como
+no disponibles, sin convertirlos en cero.
+
+Los importes conservan precisión mediante Decimal.
+Las funciones no modifican los registros de entrada.
+
+test_api_records.py comprueba casos válidos e inválidos,
+precisión decimal y conservación de valores originales.
+La suite conjunta superó trece pruebas.
+
+Estas funciones evalúan registros individuales.
+La integridad de extracciones, paginación, fechas, duplicados,
+metadatos y mapeo externo todavía requieren controles adicionales.
