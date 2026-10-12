@@ -136,3 +136,46 @@ Pruebas adicionales realizadas:
 Estas comprobaciones son locales contra la referencia inicial.
 No implementan todavía idempotencia persistente entre ejecuciones
 ni aplican actualizaciones al estado vigente.
+
+## Calidad de eventos
+
+Componentes:
+
+- event_reference.py: construye referencias de prueba del estado inicial
+  y del estado esperado después de batch_001.
+- event_rules.py: evalúa identidad, secuencia, imagen completa,
+  atributos estables y transiciones de estado.
+- check_events.py: genera informes y archivos Parquet de evidencia.
+
+Las referencias proceden de los datos y expectativas de M2.
+Son referencias de prueba; no representan un estado Silver persistente.
+
+El evaluador compara cada evento contra una referencia fija.
+No aplica cambios ni avanza secuencias durante la evaluación.
+
+Resultados posibles: accepted, rejected, conflict, pending y duplicate.
+El informe reconcilia las cinco categorías sin contar un evento dos veces.
+
+Los rechazos y conflictos se conservan en events_quarantine.parquet.
+Los pendientes se conservan por separado en events_pending.parquet.
+Solo se generan estos archivos cuando existen registros correspondientes.
+
+Las salidas conservan el contenido original, los motivos,
+la procedencia y la referencia utilizada cuando corresponde.
+
+## Pruebas de eventos realizadas
+
+- S13: mismo event_id con contenido diferente, clasificado como conflicto.
+- S14: misma clave y secuencia con otro event_id, clasificado como conflicto.
+- S15: transición de cancelled a confirmed, rechazada.
+- S20: modificación de un atributo estable, rechazada.
+- batch_002: evento duplicado y evento pendiente por hueco de secuencia.
+- Contradicciones dentro de un lote: eventos implicados en conflicto.
+- Repetición idéntica dentro de un lote: una aceptación y un duplicado.
+
+La suite conjunta de pedidos y eventos superó ocho pruebas.
+También se verificaron los tamaños, hashes y contenidos de las evidencias.
+
+La aplicación efectiva de eventos y el estado persistente corresponden
+a M8. Los controles de API, mapeo externo y publicación de evidencias
+en Azure siguen pendientes en M6.
