@@ -50,4 +50,59 @@ Los informes de prueba se generaron en una carpeta temporal y se eliminaron.
 ## Estado
 
 Validación de transporte implementada y comprobada con esos casos.
-Reglas de negocio, clasificación de registros y cuarentena pendientes.
+Reglas de pedidos CSV nuevos y cuarentena Parquet local implementadas.
+Comparación de claves existentes, eventos y controles de API pendientes.
+
+## Calidad de pedidos nuevos
+
+Componentes:
+
+- reference_data.py: verifica hashes y conteos de la referencia inicial.
+- record_rules.py: comprueba tipos, valores, fechas y referencias.
+- new_order_rules.py: evalúa pedidos y propaga rechazos a sus líneas.
+- check_new_orders.py: genera informe y cuarentena Parquet local.
+
+Ejemplo con una anomalía deliberada:
+
+    python quality/check_new_orders.py \
+        --batch-dir data/incremental/invalid/S16 \
+        --output-dir data/validation/quality_s16
+
+La salida debe ser nueva y estar fuera del lote.
+Para una entrada procedente de una ingesta real, proporcionar
+--ingestion-run-id con su identificador de procedencia.
+En pruebas locales sin ingesta, ese campo permanece nulo.
+
+## Informe y cuarentena
+
+completed_for_scope indica que terminó la evaluación de pedidos nuevos,
+aunque existan rechazos. No declara aceptación completa del lote.
+
+El informe reconcilia registros leídos, aceptados y rechazados.
+Los eventos JSONL se contabilizan como no evaluados en este alcance.
+
+Solo se generan Parquet para entidades con registros rechazados.
+Conservan contenido original, clave, archivo, número de registro,
+identificadores, fecha UTC y lista de motivos.
+
+Una línea inválida impide aceptar su pedido completo.
+Los pedidos independientes pueden seguir aceptados.
+
+Los registros aceptados se contabilizan en el informe.
+Esta implementación todavía no publica datos aceptados en Silver.
+
+La cuarentena se guarda localmente; no se publica aún en Azure.
+
+## Pruebas reutilizables
+
+    python tests/quality/test_new_orders.py
+
+Resultados comprobados:
+
+- batch_001: dos pedidos y dos líneas aceptados, sin cuarentena.
+- S16: un pedido y una línea rechazados por referencia inválida.
+- S17: un pedido y una línea rechazados por descuento inválido.
+- S18: lote bloqueado por hash, sin procesamiento de registros.
+- Contenido, motivos, hashes y conteos de los Parquet verificados.
+
+Las salidas de prueba se crean en carpetas temporales y se eliminan.
