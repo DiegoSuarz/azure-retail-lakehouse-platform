@@ -179,3 +179,17 @@ También se verificaron los tamaños, hashes y contenidos de las evidencias.
 La aplicación efectiva de eventos y el estado persistente corresponden
 a M8. Los controles de API, mapeo externo y publicación de evidencias
 en Azure siguen pendientes en M6.
+
+## Pruebas adicionales de transporte
+
+test_batch_transport.py comprueba cuatro defectos sobre copias temporales:
+
+- DQ001: versión de manifiesto incompatible.
+- DQ002: archivo declarado ausente.
+- DQ003: conteo diferente del manifiesto.
+- DQ004: encabezado CSV incompatible, conservando un hash correcto.
+
+Todos los casos generan un informe blocked, sin procesar registros
+de negocio ni modificar las entradas.
+
+La suite conjunta superó nueve pruebas.
