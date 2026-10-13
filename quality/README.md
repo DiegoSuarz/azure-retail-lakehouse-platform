@@ -249,3 +249,32 @@ superada la reconciliación completa de controles del manifiesto.
 Los evaluadores no modifican los archivos conservados.
 El informe persistente, la cuarentena de API y la evaluación
 del mapeo externo siguen pendientes.
+
+## Informes y cuarentena de API
+
+check_api_extraction.py evalúa una extracción conservada y genera
+report.json en una carpeta nueva, fuera de la entrada.
+
+El informe registra procedencia, conteos, reconciliación,
+disponibilidad de tasas, errores y archivos de cuarentena.
+
+completed_for_scope indica evaluación terminada, aunque existan rechazos.
+blocked indica que la extracción no superó los controles previos;
+en ese caso no se declaran registros procesados.
+
+Solo se genera cuarentena Parquet cuando existen registros rechazados.
+Cada fila conserva la respuesta original completa, su SHA-256,
+la posición del registro mediante JSON Pointer, clave, motivos,
+identificadores y fecha UTC de evaluación.
+
+Las extracciones reales de M5 generaron informes sin rechazos:
+38 productos de DummyJSON y 195 observaciones de BCRPData,
+con 184 tasas disponibles y 11 no disponibles.
+
+test_api_reports.py comprueba:
+
+- Producto inválido: 37 aceptados y uno rechazado, con evidencia íntegra.
+- Hash incorrecto: extracción bloqueada, sin cuarentena de registros.
+
+La suite conjunta superó veinte pruebas.
+Los informes permanecen locales; su publicación en Azure está pendiente.
