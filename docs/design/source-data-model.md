@@ -195,5 +195,6 @@ significados distintos y se conservarán por separado.
 
 ## Estado
 
-Modelo propuesto en M2.1.
-Las tablas y las restricciones todavía no están implementadas.
+Modelo definido en M2.1 e implementado en SQL Server durante M2.
+La carga inicial se extrajo y validó en Bronze durante M5.
+La implementación de las tablas Silver está en progreso en M7.
