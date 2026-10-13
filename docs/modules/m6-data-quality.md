@@ -255,4 +255,7 @@ en los módulos siguientes; las referencias de prueba no la sustituyen.
 
 Implementación y publicación de evidencias verificadas.
 Cierre técnico documentado y revisión operativa realizada.
-M6 validado para su alcance; integración en main pendiente.
+M6 completado para el alcance de reglas, validaciones y cuarentena.
+Integrado en main mediante el pull request #11.
+Commit de integración: 0b745bc.
+Las limitaciones y pendientes descritos conservan su alcance.

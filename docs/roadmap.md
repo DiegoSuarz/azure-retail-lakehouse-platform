@@ -19,7 +19,7 @@ en ventanas de uso de Azure para controlar los costos.
 | M3 | ADLS Gen2 y organización del almacenamiento | Completado |
 | M4 | ADF, SHIR y fundamentos de orquestación | Completado |
 | M5 | Ingesta inicial y cargas a Bronze | Completado |
-| M6 | Reglas de calidad, validaciones y cuarentena | Validado, pendiente de integración |
+| M6 | Reglas de calidad, validaciones y cuarentena | Completado |
 | M7 | Transformaciones PySpark y tablas Delta en Silver | Pendiente |
 | M8 | CDC simulado, incrementales e idempotencia | Pendiente |
 | M9 | Modelo estrella y capa Gold | Pendiente |
@@ -108,7 +108,7 @@ M3 está completado e integrado en main.
 M4 está completado e integrado en main.
 M5 está completado e integrado en main.
 SQL Server, lotes sintéticos y API disponen de entradas verificadas en Bronze.
-M6 está validado, pendiente de integración en main.
+M6 está completado e integrado en main.
 El siguiente módulo es M7: transformaciones PySpark y tablas Delta en Silver.
 Las capas de procesamiento y el consumo analítico siguen pendientes.
 
