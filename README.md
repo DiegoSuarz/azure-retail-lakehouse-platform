@@ -55,13 +55,13 @@ controles de calidad y publicación para consumo analítico.
 ## Estado
 
 M0 completado como diseño. M1, M2, M3, M4 y M5 completados.
-M6 pendiente.
+M6 validado, pendiente de integración.
 
 El origen SQL Server y el almacenamiento en ADLS Gen2 están implementados.
 La carga inicial de SQL Server mediante ADF está validada en Bronze.
 Los lotes sintéticos y las API están publicados y verificados.
-Las reglas de calidad, las transformaciones y el consumo analítico
-todavía están pendientes.
+Los controles de calidad están implementados y sus evidencias verificadas.
+Las transformaciones y el consumo analítico todavía están pendientes.
 
 La disponibilidad y los costos pendientes se verificarán antes
 de los despliegues correspondientes.
