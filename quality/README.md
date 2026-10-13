@@ -307,3 +307,28 @@ test_api_reports.py comprueba:
 
 La suite conjunta superó veinte pruebas.
 Los informes permanecen locales; su publicación en Azure está pendiente.
+
+## Calidad del mapeo externo
+
+check_product_mapping.py implementa DQ016.
+
+Comprueba encabezados, identificadores positivos, referencias existentes,
+unicidad por producto local y externo, tipo de asociación y nota educativa.
+
+El catálogo externo debe superar la evaluación de DummyJSON.
+La referencia local utiliza el conjunto inicial con hashes verificados.
+
+El archivo real contiene seis asociaciones válidas.
+No se exige cobertura de todos los productos locales.
+
+Cualquier asociación inválida bloquea la incorporación del archivo completo.
+Las asociaciones repetidas identifican todas las filas implicadas.
+El informe conserva el hash del mapeo, la referencia de extracción,
+los conteos y los motivos de rechazo.
+
+test_product_mapping.py superó dos pruebas, incluidos cinco casos:
+referencia local inexistente, referencia externa inexistente,
+producto local repetido, producto externo repetido y nota vacía.
+
+Las pruebas utilizan copias temporales y conservan el archivo original.
+La incorporación del mapeo a Silver sigue pendiente.
