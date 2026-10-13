@@ -128,9 +128,9 @@ en los controles de cabeceras y líneas.
 En un lote bloqueado no se inventarán conteos de registros procesados.
 El fallo se registrará a nivel de lote.
 
-Las primeras salidas de cuarentena serán Parquet locales.
-Su publicación en quarantine y los informes en operations
-se realizará después de validar el comportamiento.
+Las salidas de cuarentena se generan en Parquet locales.
+Se publicaron evidencias verificadas en quarantine y operations,
+manteniendo los eventos pendientes separados de los rechazos.
 
 ## Pruebas previstas
 
@@ -156,4 +156,5 @@ Informes y cuarentena local comprobados; 25 pruebas superadas.
 Diez archivos de evidencia publicados y verificados en Azure.
 Los eventos se evalúan contra referencias fijas de prueba.
 La aplicación de eventos y el estado persistente corresponden a M8.
-Cierre documental, revisión operativa e integración de M6 pendientes.
+Cierre técnico documentado y revisión operativa realizada.
+M6 validado para su alcance; integración en main pendiente.
