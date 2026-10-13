@@ -151,4 +151,9 @@ de una única regla incumplida.
 ## Estado
 
 Catálogo definido en M6.1.
-Motor de validación, cuarentena e informes pendientes.
+Validadores de transporte, pedidos CSV, eventos, API y mapeo implementados.
+Informes y cuarentena local comprobados; 25 pruebas superadas.
+Diez archivos de evidencia publicados y verificados en Azure.
+Los eventos se evalúan contra referencias fijas de prueba.
+La aplicación de eventos y el estado persistente corresponden a M8.
+Cierre documental, revisión operativa e integración de M6 pendientes.

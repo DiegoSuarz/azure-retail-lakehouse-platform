@@ -378,3 +378,29 @@ La publicación de varios archivos no constituye una transacción atómica.
 
 test_publish_evidence.py comprobó que un hash incorrecto y un
 contenedor incompatible se rechazan antes de cualquier llamada a Azure CLI.
+
+## Publicación de evidencias verificada
+
+Cuenta: starlpdevdiego01.
+
+Publicación realizada entre:
+2026-10-13T02:22:31.206992+00:00 y
+2026-10-13T02:23:11.475247+00:00.
+
+Se publicaron y verificaron diez archivos:
+
+- quarantine: tres Parquet de rechazos y conflictos.
+- operations: seis informes y un Parquet de eventos pendientes.
+
+Cada objeto se descargó y coincidió en tamaño y SHA-256
+con el archivo preparado.
+
+El informe local terminó con status=completed y diez entradas verified.
+También se comprobó su correspondencia con el hash del plan.
+
+Las evidencias sintéticas publicadas corresponden a pruebas locales
+con referencias explícitas. No representan aplicación de eventos
+ni cambios en el estado Silver.
+
+La suite completa de calidad superó 25 pruebas.
+El paquete y el informe de publicación permanecen excluidos de Git.
