@@ -359,3 +359,22 @@ rechazo por hash diferente y rechazo por clasificación incompatible,
 incluso cuando el hash declarado coincide.
 
 La preparación no publica archivos en Azure.
+
+## Publicación de evidencias
+
+publish_evidence.py verifica el paquete completo antes de publicar.
+Sin --publish, únicamente revisa los archivos y sus destinos.
+
+La publicación utiliza Azure CLI con autenticación Microsoft Entra.
+Permite exclusivamente los destinos definidos en operations y quarantine.
+
+Los Parquet se publican antes de los informes.
+Cada archivo se sube sin sobrescritura, se descarga y se verifica
+mediante tamaño y SHA-256.
+
+El informe local registra avances, fallos y archivos verificados.
+Un fallo detiene la ejecución y conserva los objetos ya publicados.
+La publicación de varios archivos no constituye una transacción atómica.
+
+test_publish_evidence.py comprobó que un hash incorrecto y un
+contenedor incompatible se rechazan antes de cualquier llamada a Azure CLI.
