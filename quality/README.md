@@ -219,3 +219,33 @@ La suite conjunta superó trece pruebas.
 Estas funciones evalúan registros individuales.
 La integridad de extracciones, paginación, fechas, duplicados,
 metadatos y mapeo externo todavía requieren controles adicionales.
+
+## Calidad de extracciones conservadas
+
+Componentes:
+
+- api_extraction_input.py: verifica identidad, inventario, hashes,
+  tamaños, JSON y metadatos de procedencia.
+- dummyjson_rules.py: evalúa categorías, paginación, identificadores,
+  productos y controles del manifiesto.
+- bcrpdata_rules.py: evalúa serie solicitada, intervalo, fechas,
+  tasas y controles del manifiesto.
+
+Resultados de las extracciones conservadas de M5:
+
+- DummyJSON: 38 productos aceptados.
+- BCRPData: 195 observaciones aceptadas.
+- BCRPData: 184 tasas disponibles y 11 no disponibles.
+
+Los conteos describen esas extracciones; no son límites del contrato.
+
+Las pruebas comprueban paginación incorrecta, productos inválidos,
+fechas inválidas, tasas negativas y fechas duplicadas.
+Los defectos se introducen en copias en memoria.
+
+Cuando existen observaciones rechazadas de BCRPData, no se declara
+superada la reconciliación completa de controles del manifiesto.
+
+Los evaluadores no modifican los archivos conservados.
+El informe persistente, la cuarentena de API y la evaluación
+del mapeo externo siguen pendientes.
