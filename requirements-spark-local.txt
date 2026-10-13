@@ -1,0 +1,3 @@
+-r requirements.txt
+pyspark==3.5.8
+delta-spark==3.3.3
