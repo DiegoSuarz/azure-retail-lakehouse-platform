@@ -332,3 +332,30 @@ producto local repetido, producto externo repetido y nota vacía.
 
 Las pruebas utilizan copias temporales y conservan el archivo original.
 La incorporación del mapeo a Silver sigue pendiente.
+
+## Preparación de evidencias para publicación
+
+prepare_publication.py crea un paquete local con copias de los informes
+y archivos Parquet, junto con publication_plan.json.
+
+Verifica tamaños, hashes, conteos, identificadores, fuente, entidad
+y clasificación de cada archivo Parquet.
+
+Destinos:
+
+- operations/quality/run_id=<processing_run_id>/report.json
+- quarantine/source=<source_system>/entity=<entity>/run_id=<processing_run_id>/
+- operations/pending_events/run_id=<processing_run_id>/
+
+Los pendientes permanecen separados de los rechazos y conflictos.
+Cada Parquet debe contener una sola fuente y entidad.
+Los archivos que mezclan entidades requieren separación previa.
+
+El paquete preparado contiene seis informes, tres Parquet de cuarentena
+y un Parquet de pendientes. Está excluido de Git.
+
+test_prepare_publication.py comprueba conservación de bytes y destinos,
+rechazo por hash diferente y rechazo por clasificación incompatible,
+incluso cuando el hash declarado coincide.
+
+La preparación no publica archivos en Azure.
