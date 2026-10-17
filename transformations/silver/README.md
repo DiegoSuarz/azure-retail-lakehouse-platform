@@ -166,3 +166,25 @@ La carga inicial de Bronze contiene cero pedidos sin líneas.
 Este control comprueba existencia de líneas.
 Su validez se evalúa mediante los controles de claves,
 referencias y valores comerciales.
+
+## Capacidad de almacenamiento de textos
+
+La consulta del origen confirmó Modern_Spanish_CI_AS en las columnas
+de texto y la página de códigos 1252 para varchar y char.
+
+validate_text_storage comprueba presencia, representación y longitud
+en bytes, sin modificar los valores:
+
+- nvarchar: codificación UTF-16LE.
+- varchar y char: codificación Windows-1252 estricta.
+
+Las once columnas de texto de Bronze superaron el control.
+Se probaron longitudes límite y excesivas, caracteres representables
+e incompatibles, cadenas vacías y nulos.
+También se verificó la ejecución de la UDF dentro de Spark.
+
+Las cadenas vacías no se rechazan por esta regla.
+Los dominios de estado y moneda se comprueban por separado.
+
+Este control no reproduce las comparaciones de la intercalación
+ni verifica la unicidad de las claves alternativas.

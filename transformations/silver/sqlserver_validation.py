@@ -175,3 +175,64 @@ def validate_order_completeness(frames):
         "orders_without_items": missing_rows,
         "passed": missing_rows == 0,
     }
+
+
+TEXT_STORAGE = {
+    "categories": {
+        "category_name": ("utf-16-le", 200),
+    },
+    "products": {
+        "sku": ("cp1252", 40),
+        "product_name": ("utf-16-le", 400),
+        "brand": ("utf-16-le", 200),
+    },
+    "customers": {
+        "first_name": ("utf-16-le", 200),
+        "last_name": ("utf-16-le", 200),
+        "email": ("cp1252", 254),
+        "city": ("utf-16-le", 200),
+        "region": ("utf-16-le", 200),
+    },
+    "orders": {
+        "status": ("cp1252", 20),
+        "currency_code": ("cp1252", 3),
+    },
+    "order_items": {},
+}
+
+
+def text_fits_storage(value, encoding, max_bytes):
+    """Comprueba presencia, representación y longitud sin alterar texto."""
+    if value is None:
+        return False
+    try:
+        return len(value.encode(encoding, errors="strict")) <= max_bytes
+    except UnicodeError:
+        return False
+
+
+def validate_text_storage(frame, entity):
+    """Cuenta textos incompatibles con el almacenamiento del origen."""
+    rules = TEXT_STORAGE[entity]
+    results = []
+
+    for column, (encoding, max_bytes) in rules.items():
+        checker = F.udf(
+            lambda value, enc=encoding, limit=max_bytes:
+                text_fits_storage(value, enc, limit),
+            "boolean",
+        )
+
+        invalid_rows = frame.filter(~checker(F.col(column))).count()
+
+        results.append({
+            "entity": entity,
+            "column": column,
+            "rule": "text_fits_source_storage",
+            "encoding": encoding,
+            "max_bytes": max_bytes,
+            "invalid_rows": invalid_rows,
+            "passed": invalid_rows == 0,
+        })
+
+    return results
