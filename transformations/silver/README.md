@@ -141,3 +141,15 @@ categorías mutuamente excluyentes.
 
 Las reglas temporales y la existencia de líneas por pedido
 siguen pendientes.
+
+## Fechas técnicas por registro
+
+validate_record_timestamps comprueba que created_at y updated_at
+estén informados y que updated_at sea mayor o igual que created_at.
+
+Se comprobaron fechas iguales, actualización posterior,
+actualización anterior y fechas nulas.
+Las cinco entidades de Bronze superaron este control.
+
+Esta validación no comprueba todavía fechas entre entidades,
+order_date ni el corte temporal de la carga inicial.

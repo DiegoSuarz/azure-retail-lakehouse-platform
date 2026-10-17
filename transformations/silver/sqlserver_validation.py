@@ -128,3 +128,26 @@ def validate_business_values(frame, entity):
         }
         for name, count in summary.items()
     ]
+
+
+def validate_record_timestamps(frame, entity):
+    """Comprueba presencia y orden de las fechas técnicas."""
+    if entity not in PRIMARY_KEYS:
+        raise ValueError(f"Entidad no admitida: {entity}")
+
+    valid = (
+        F.col("created_at").isNotNull()
+        & F.col("updated_at").isNotNull()
+        & (F.col("updated_at") >= F.col("created_at"))
+    )
+
+    invalid_rows = frame.filter(
+        ~F.coalesce(valid, F.lit(False))
+    ).count()
+
+    return {
+        "entity": entity,
+        "rule": "updated_at_not_before_created_at",
+        "invalid_rows": invalid_rows,
+        "passed": invalid_rows == 0,
+    }
