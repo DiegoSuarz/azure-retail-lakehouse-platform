@@ -66,3 +66,30 @@ La obligatoriedad se comprobó sobre los datos explícitamente.
 Esta comprobación no acredita todavía unicidad, relaciones,
 reglas comerciales ni igualdad completa de valores.
 No se escribieron tablas Silver.
+
+## Validación de claves
+
+sqlserver_validation.py implementa controles sobre DataFrames:
+
+- Claves primarias informadas, positivas y únicas.
+- Clave compuesta de order_items: order_id y line_number.
+- Referencias de productos a categorías.
+- Referencias de pedidos a clientes.
+- Referencias de líneas a pedidos y productos.
+
+Las cinco entidades de la carga inicial superaron los controles
+de claves primarias: cero filas con claves inválidas y cero
+grupos de claves duplicadas.
+
+Las cuatro relaciones superaron los controles de claves foráneas:
+cero filas sin referencia.
+
+Se probaron claves simples y compuestas válidas, inválidas y repetidas.
+Los controles de referencias se probaron con claves existentes,
+inexistentes, nulas y filas repetidas sin referencia.
+
+Los grupos duplicados cuentan combinaciones de clave repetidas.
+Las referencias inexistentes cuentan filas afectadas.
+
+Estas comprobaciones no acreditan todavía las claves alternativas,
+las reglas comerciales ni la conservación completa de valores.
