@@ -103,3 +103,25 @@ Carga integrada y tablas Silver del proyecto pendientes.
 
 Las pruebas locales no verifican permisos ni acceso a ADLS.
 La ejecución integrada en Databricks sigue pendiente.
+
+## Primera carga integrada local
+
+sqlserver_transform.py reúne cuatro pasos:
+
+1. Lectura de las cinco tablas con esquemas explícitos.
+2. Validación integrada de 26 controles.
+3. Incorporación de cinco columnas de procedencia.
+4. Escritura Delta y comparación de tipos y valores recuperados.
+
+La ejecución 1b1a6fd6-cb9b-4917-a651-20baeec5fd93 completó
+la carga local con 8428 registros: 6 categorías, 60 productos,
+500 clientes, 2000 pedidos y 5862 líneas.
+
+Las comparaciones en ambas direcciones mediante exceptAll
+no encontraron diferencias, incluidas las columnas técnicas.
+
+Las tablas y report.json se conservaron en:
+data/validation/silver_sqlserver/run_id=1b1a6fd6-cb9b-4917-a651-20baeec5fd93/
+
+La comprobación corresponde a una ejecución local.
+La ejecución en Databricks y el cierre de M7 siguen pendientes.
