@@ -117,3 +117,27 @@ categorías mutuamente excluyentes.
 
 Las reglas temporales y la existencia de líneas por pedido
 siguen pendientes.
+
+## Validación de valores comerciales
+
+validate_business_values comprueba:
+
+- list_price mayor que cero.
+- Estados pending, confirmed o cancelled.
+- Moneda PEN.
+- quantity y unit_price mayores que cero.
+- discount_amount entre cero y el importe bruto de la línea.
+
+Las seis reglas superaron la comprobación de la carga inicial,
+sin filas inválidas.
+
+Se probaron valores nulos, cero, negativos, estados y monedas
+incompatibles, y descuentos fuera del intervalo permitido.
+Los descuentos cero e iguales al importe bruto son válidos.
+
+Los incumplimientos se cuentan por regla.
+Una fila puede incumplir varias reglas; sus conteos no representan
+categorías mutuamente excluyentes.
+
+Las reglas temporales y la existencia de líneas por pedido
+siguen pendientes.
