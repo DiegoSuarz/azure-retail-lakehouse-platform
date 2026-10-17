@@ -77,3 +77,54 @@ def validate_foreign_keys(frames):
         })
 
     return results
+
+
+def validate_business_values(frame, entity):
+    """Cuenta incumplimientos de valores comerciales por regla."""
+    rules = {}
+
+    if entity == "products":
+        rules["positive_list_price"] = F.col("list_price") > 0
+
+    elif entity == "orders":
+        rules["allowed_status"] = F.col("status").isin(
+            "pending", "confirmed", "cancelled"
+        )
+        rules["pen_currency"] = F.col("currency_code") == "PEN"
+
+    elif entity == "order_items":
+        rules["positive_quantity"] = F.col("quantity") > 0
+        rules["positive_unit_price"] = F.col("unit_price") > 0
+        rules["valid_discount"] = (
+            (F.col("discount_amount") >= 0)
+            & (
+                F.col("discount_amount")
+                <= F.col("quantity") * F.col("unit_price")
+            )
+        )
+
+    elif entity not in PRIMARY_KEYS:
+        raise ValueError(f"Entidad no admitida: {entity}")
+
+    if not rules:
+        return []
+
+    summary = frame.agg(*[
+        F.count(
+            F.when(
+                ~F.coalesce(condition, F.lit(False)),
+                F.lit(1),
+            )
+        ).alias(name)
+        for name, condition in rules.items()
+    ]).first().asDict()
+
+    return [
+        {
+            "entity": entity,
+            "rule": name,
+            "invalid_rows": count,
+            "passed": count == 0,
+        }
+        for name, count in summary.items()
+    ]
