@@ -236,3 +236,41 @@ def validate_text_storage(frame, entity):
         })
 
     return results
+
+
+ALTERNATE_KEYS = {
+    "categories": ("category_name",),
+    "products": ("sku",),
+    "customers": ("email",),
+    "orders": (),
+    "order_items": (),
+}
+
+
+def validate_alternate_keys(frame, entity):
+    """Detecta duplicados bajo la política de comparación de Silver."""
+    results = []
+
+    for column in ALTERNATE_KEYS[entity]:
+        comparison = F.lower(F.rtrim(F.col(column)))
+
+        duplicate_groups = (
+            frame.select(comparison.alias("comparison_key"))
+            .groupBy("comparison_key")
+            .count()
+            .filter(F.col("count") > 1)
+            .count()
+        )
+
+        null_rows = frame.filter(F.col(column).isNull()).count()
+
+        results.append({
+            "entity": entity,
+            "column": column,
+            "comparison_policy": "spark_lower_rtrim",
+            "null_rows": null_rows,
+            "duplicate_key_groups": duplicate_groups,
+            "passed": null_rows == 0 and duplicate_groups == 0,
+        })
+
+    return results

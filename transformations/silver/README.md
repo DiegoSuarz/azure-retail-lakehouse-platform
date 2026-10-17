@@ -188,3 +188,21 @@ Los dominios de estado y moneda se comprueban por separado.
 
 Este control no reproduce las comparaciones de la intercalación
 ni verifica la unicidad de las claves alternativas.
+
+## Claves alternativas
+
+validate_alternate_keys comprueba category_name, sku y email.
+
+La política spark_lower_rtrim utiliza lower y rtrim únicamente
+para construir la clave de comparación.
+Conserva los textos originales y distingue los acentos.
+
+Se comprobaron claves diferentes, diferencias de mayúsculas,
+espacios finales, acentos, espacios iniciales y claves nulas.
+
+Las tres claves de Bronze superaron el control:
+cero nulos y cero grupos duplicados bajo esta política.
+
+Esta comparación no reproduce toda la intercalación
+Modern_Spanish_CI_AS de SQL Server.
+No sustituye las restricciones UNIQUE del origen.
