@@ -224,3 +224,18 @@ los límites de data/initial/manifest.json.
 
 La correspondencia con el corte del manifiesto de extracción
 se comprobará al integrar la carga.
+
+## Creación de líneas respecto al pedido
+
+validate_item_creation_dates exige que created_at de cada línea
+sea mayor o igual que created_at de su pedido.
+
+Se probaron fechas iguales, posteriores, anteriores, pedido ausente
+y fechas nulas en ambos lados.
+Bronze superó el control sin líneas incompatibles.
+
+La clave primaria de pedidos debe validarse antes del JOIN
+para evitar multiplicación de filas.
+
+Una referencia ausente puede incumplir también el control de claves
+foráneas. Los conteos por regla pueden solaparse.

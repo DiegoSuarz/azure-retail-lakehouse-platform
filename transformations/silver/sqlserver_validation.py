@@ -315,3 +315,34 @@ def validate_initial_period(frame, entity, cutoff, period_start):
         }
         for name, count in summary.items()
     ]
+
+
+def validate_item_creation_dates(frames):
+    """Comprueba creación de líneas respecto a sus pedidos."""
+    items = frames["order_items"].alias("item")
+    orders = frames["orders"].select(
+        "order_id", "created_at"
+    ).alias("parent")
+
+    compared = items.join(
+        orders,
+        F.col("item.order_id") == F.col("parent.order_id"),
+        "left",
+    )
+
+    valid = (
+        F.col("item.created_at").isNotNull()
+        & F.col("parent.created_at").isNotNull()
+        & (F.col("item.created_at") >= F.col("parent.created_at"))
+    )
+
+    invalid_rows = compared.filter(
+        ~F.coalesce(valid, F.lit(False))
+    ).count()
+
+    return {
+        "entity": "order_items",
+        "rule": "item_created_not_before_order",
+        "invalid_rows": invalid_rows,
+        "passed": invalid_rows == 0,
+    }
