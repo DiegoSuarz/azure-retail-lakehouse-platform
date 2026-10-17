@@ -151,3 +151,27 @@ def validate_record_timestamps(frame, entity):
         "invalid_rows": invalid_rows,
         "passed": invalid_rows == 0,
     }
+
+
+def validate_order_completeness(frames):
+    """Cuenta pedidos que no tienen ninguna línea."""
+    orders = frames["orders"].alias("orders")
+    item_orders = (
+        frames["order_items"]
+        .select("order_id")
+        .distinct()
+        .alias("item_orders")
+    )
+
+    missing_rows = orders.join(
+        item_orders,
+        F.col("orders.order_id") == F.col("item_orders.order_id"),
+        "left_anti",
+    ).count()
+
+    return {
+        "entity": "orders",
+        "rule": "order_has_items",
+        "orders_without_items": missing_rows,
+        "passed": missing_rows == 0,
+    }

@@ -153,3 +153,16 @@ Las cinco entidades de Bronze superaron este control.
 
 Esta validación no comprueba todavía fechas entre entidades,
 order_date ni el corte temporal de la carga inicial.
+
+## Existencia de líneas por pedido
+
+validate_order_completeness identifica pedidos sin líneas
+mediante LEFT ANTI JOIN.
+
+Se comprobaron pedidos con una o varias líneas, pedidos sin líneas
+y un conjunto de líneas vacío.
+La carga inicial de Bronze contiene cero pedidos sin líneas.
+
+Este control comprueba existencia de líneas.
+Su validez se evalúa mediante los controles de claves,
+referencias y valores comerciales.
