@@ -274,3 +274,44 @@ def validate_alternate_keys(frame, entity):
         })
 
     return results
+
+
+def validate_initial_period(frame, entity, cutoff, period_start):
+    """Comprueba el período de la carga inicial con límites explícitos."""
+    if entity not in PRIMARY_KEYS:
+        raise ValueError(f"Entidad no admitida: {entity}")
+    if (
+        cutoff.tzinfo is None or cutoff.utcoffset() is None
+        or period_start.tzinfo is None or period_start.utcoffset() is None
+    ):
+        raise ValueError("Los límites deben incluir zona horaria.")
+    if period_start >= cutoff:
+        raise ValueError("El inicio debe ser anterior al corte.")
+
+    rules = {
+        "created_at_before_cutoff": F.col("created_at") < F.lit(cutoff),
+        "updated_at_before_cutoff": F.col("updated_at") < F.lit(cutoff),
+    }
+
+    if entity == "orders":
+        rules["order_date_in_initial_period"] = (
+            (F.col("order_date") >= F.lit(period_start))
+            & (F.col("order_date") < F.lit(cutoff))
+        )
+
+    summary = frame.agg(*[
+        F.count(
+            F.when(~F.coalesce(condition, F.lit(False)), F.lit(1))
+        ).alias(name)
+        for name, condition in rules.items()
+    ]).first().asDict()
+
+    return [
+        {
+            "entity": entity,
+            "rule": name,
+            "invalid_rows": count,
+            "passed": count == 0,
+        }
+        for name, count in summary.items()
+    ]

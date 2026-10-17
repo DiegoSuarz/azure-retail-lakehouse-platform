@@ -206,3 +206,21 @@ cero nulos y cero grupos duplicados bajo esta política.
 Esta comparación no reproduce toda la intercalación
 Modern_Spanish_CI_AS de SQL Server.
 No sustituye las restricciones UNIQUE del origen.
+
+## Período de la carga inicial
+
+validate_initial_period recibe límites con zona horaria y comprueba:
+
+- created_at y updated_at anteriores al corte exclusivo.
+- order_date dentro del período comercial: inicio inclusivo
+  y corte exclusivo.
+
+No exige que las fechas técnicas sean posteriores al inicio comercial.
+
+Se probaron el inicio exacto, el instante anterior al corte,
+el corte exacto, pedidos anteriores al período y fechas nulas.
+Las cinco entidades de Bronze superaron el control usando
+los límites de data/initial/manifest.json.
+
+La correspondencia con el corte del manifiesto de extracción
+se comprobará al integrar la carga.
