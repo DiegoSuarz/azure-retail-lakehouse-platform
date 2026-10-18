@@ -125,3 +125,26 @@ data/validation/silver_sqlserver/run_id=1b1a6fd6-cb9b-4917-a651-20baeec5fd93/
 
 La comprobación corresponde a una ejecución local.
 La ejecución en Databricks y el cierre de M7 siguen pendientes.
+
+## Ejecución local
+
+Desde la raíz del repositorio, con el entorno virtual activo:
+
+    python -m transformations.silver.run_sqlserver_local \
+        --bronze-root data/validation/bronze_download/sqlserver/techretail_oltp/initial/run_id=89d277f4-ddee-49a2-9d9f-588efacf9788 \
+        --output-root data/validation/silver_sqlserver \
+        --ingestion-run-id 89d277f4-ddee-49a2-9d9f-588efacf9788
+
+El lanzador configura Spark y Delta locales y ejecuta lectura,
+validación, procedencia, escritura y comparación de resultados.
+
+Cada ejecución crea una carpeta nueva con processing_run_id.
+No reemplaza las tablas de ejecuciones anteriores.
+Esta separación permite repetir pruebas locales; no constituye
+una implementación de actualización incremental.
+
+Solo genera report.json con estado completed después de verificar
+las cinco tablas. Un fallo puede dejar escrituras parciales.
+
+La ejecución 52af9f2c-fb55-45c9-ba54-991e5dba4fc2 superó
+26 controles y verificó 8428 registros en cinco tablas Delta.
