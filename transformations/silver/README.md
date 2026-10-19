@@ -148,3 +148,32 @@ las cinco tablas. Un fallo puede dejar escrituras parciales.
 
 La ejecución 52af9f2c-fb55-45c9-ba54-991e5dba4fc2 superó
 26 controles y verificó 8428 registros en cinco tablas Delta.
+
+## Productos de DummyJSON
+
+dummyjson_schemas.py define los campos de lectura de las páginas JSON.
+Para la extracción conservada, price utiliza DecimalType(18, 2)
+y rating DecimalType(3, 2), suficientes para los valores inspeccionados.
+
+dummyjson_transform.py implementa:
+
+1. Lectura de páginas originales, excluyendo archivos de metadatos.
+2. Extracción de una fila por producto mediante explode.
+3. Normalización de nombres y adición de procedencia.
+4. Validación de campos esenciales y unicidad de la clave.
+5. Escritura Delta con errorifexists y comparación de tipos y valores.
+
+Los campos opcionales ausentes permanecen nulos.
+external_currency_code permanece nulo porque la fuente no declara moneda.
+Los atributos externos no sustituyen los valores comerciales locales.
+
+La ejecución cfe8f239-fdaf-404b-a629-7ca35d63eb2b leyó nueve páginas
+y escribió 38 productos en external/dummyjson_products.
+No se detectaron filas inválidas ni grupos duplicados.
+La lectura Delta conservó los tipos y valores del DataFrame normalizado.
+
+Las tablas y report.json se conservaron en:
+data/validation/silver_dummyjson/run_id=cfe8f239-fdaf-404b-a629-7ca35d63eb2b/
+
+La comprobación corresponde al entorno local.
+El lanzador reutilizable y la ejecución en Databricks siguen pendientes.
