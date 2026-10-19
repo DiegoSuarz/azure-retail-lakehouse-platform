@@ -140,7 +140,7 @@ validación, procedencia, escritura y comparación de resultados.
 
 Cada ejecución crea una carpeta nueva con processing_run_id.
 No reemplaza las tablas de ejecuciones anteriores.
-Esta separación permite repetir pruebas locales; no constituye
+Esta separación permite repetir pruebas locales, no constituye
 una implementación de actualización incremental.
 
 Solo genera report.json con estado completed después de verificar
@@ -177,3 +177,24 @@ data/validation/silver_dummyjson/run_id=cfe8f239-fdaf-404b-a629-7ca35d63eb2b/
 
 La comprobación corresponde al entorno local.
 El lanzador reutilizable y la ejecución en Databricks siguen pendientes.
+
+## Ejecución local de DummyJSON
+
+Desde la raíz del repositorio, con el entorno virtual activo:
+
+    python -m transformations.silver.run_dummyjson_local \
+        --bronze-root data/apis/dummyjson/products/ingestion_date=2026-10-11/run_id=172c6634-a566-4ae8-bfc7-04ae228dae77 \
+        --output-root data/validation/silver_dummyjson \
+        --ingestion-run-id 172c6634-a566-4ae8-bfc7-04ae228dae77
+
+El lanzador ejecuta lectura, normalización, validación,
+escritura Delta y comparación de resultados.
+Rechaza entradas vacías y diferencias de conteo durante la normalización.
+
+Cada ejecución utiliza una carpeta nueva.
+El informe completed se genera después de verificar la tabla.
+
+La ejecución e53042a4-f37f-4481-a27f-7cf83bea82ae verificó 38 productos,
+sin filas inválidas ni grupos duplicados.
+El lanzador local está implementado y comprobado.
+La ejecución en Databricks permanece pendiente.
