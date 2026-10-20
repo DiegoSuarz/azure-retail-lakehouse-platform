@@ -226,3 +226,26 @@ La salida local se conservó en:
 data/validation/silver_product_mapping/run_id=e9f8cd2d-3780-4f66-933b-6cfd48b3acf7/
 
 El lanzador reutilizable y la ejecución en Databricks siguen pendientes.
+
+## Ejecución local del mapeo
+
+Desde la raíz del repositorio, con el entorno virtual activo:
+
+    python -m transformations.silver.run_product_mapping_local \
+        --mapping-file sources/reference/product_external_mapping.csv \
+        --local-products data/validation/silver_sqlserver/run_id=52af9f2c-fb55-45c9-ba54-991e5dba4fc2/silver/techretail/products \
+        --external-products data/validation/silver_dummyjson/run_id=e53042a4-f37f-4481-a27f-7cf83bea82ae/silver/external/dummyjson_products \
+        --output-root data/validation/silver_product_mapping
+
+El lanzador comprueba las rutas de entrada y rechaza mapeos vacíos.
+Ejecuta validación, procedencia, escritura Delta y comparación.
+
+Cada ejecución utiliza una carpeta nueva.
+El informe registra las rutas de los catálogos utilizados
+y solo declara completed después de verificar la tabla.
+
+La ejecución cf0fd697-681d-4e44-ac2d-66ec8d01e396 verificó seis
+asociaciones, sin incumplimientos en los cinco conteos de validación.
+
+El lanzador local está implementado y comprobado.
+La ejecución en Databricks permanece pendiente.
