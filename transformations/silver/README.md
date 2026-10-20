@@ -198,3 +198,31 @@ La ejecución e53042a4-f37f-4481-a27f-7cf83bea82ae verificó 38 productos,
 sin filas inválidas ni grupos duplicados.
 El lanzador local está implementado y comprobado.
 La ejecución en Databricks permanece pendiente.
+
+## Mapeo externo de productos
+
+product_mapping_transform.py implementa:
+
+1. Lectura del CSV versionado con esquema explícito.
+2. Validación de campos, unicidad y referencias a ambos catálogos.
+3. Incorporación de archivo de origen, ejecución y fecha de procesamiento.
+4. Escritura Delta y comparación de tipos y valores recuperados.
+
+La validación permite como máximo una asociación por producto local
+y fuente externa, y una por producto externo.
+No exige cobertura completa de los catálogos.
+
+Las asociaciones son educativas y no implican equivalencia comercial.
+source_system identifica el catálogo externo asociado.
+No se asigna ingestion_run_id porque el mapeo procede del CSV versionado.
+
+La ejecución e9f8cd2d-3780-4f66-933b-6cfd48b3acf7 verificó seis
+asociaciones en reference/product_external_mapping.
+No se detectaron campos inválidos, grupos duplicados ni referencias
+inexistentes. La lectura Delta conservó los tipos y valores.
+
+El informe registra las rutas de ambos catálogos utilizados.
+La salida local se conservó en:
+data/validation/silver_product_mapping/run_id=e9f8cd2d-3780-4f66-933b-6cfd48b3acf7/
+
+El lanzador reutilizable y la ejecución en Databricks siguen pendientes.
