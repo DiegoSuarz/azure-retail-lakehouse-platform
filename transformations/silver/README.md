@@ -281,3 +281,30 @@ data/validation/silver_bcrpdata/run_id=60e748db-73a1-4bf1-8a79-74e8b5715c62/
 
 El lanzador reutilizable y la ejecución en Databricks
 permanecen pendientes.
+
+## Ejecución local de BCRPData
+
+Desde la raíz del repositorio, con el entorno virtual activo:
+
+    python -m transformations.silver.run_bcrpdata_local \
+        --bronze-root data/apis/bcrpdata/exchange_rates/series_code=pd04638pd/ingestion_date=2026-10-11/run_id=e7d0e002-b3a6-4de3-8157-c2a3f818cd38 \
+        --output-root data/validation/silver_bcrpdata \
+        --ingestion-run-id e7d0e002-b3a6-4de3-8157-c2a3f818cd38 \
+        --start-date 2026-01-01 \
+        --end-date 2026-09-30
+
+El lanzador comprueba que la ingesta, serie e intervalo coincidan
+con la ruta y los metadatos de la extracción.
+Utiliza extracted_at del archivo de metadatos.
+
+Ejecuta lectura, normalización, validación y escritura Delta.
+Rechaza entradas vacías y diferencias de conteo al normalizar.
+Cada ejecución utiliza una carpeta nueva y genera report.json
+con estado completed después de verificar los tipos y valores.
+
+La ejecución 7ce7eb97-03c9-4027-b6c7-cec45d833eb5 verificó
+195 observaciones: 184 disponibles y 11 no disponibles.
+No se detectaron filas inválidas ni claves duplicadas.
+
+El lanzador local está implementado y comprobado.
+La ejecución en Databricks permanece pendiente.
