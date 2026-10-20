@@ -249,3 +249,35 @@ asociaciones, sin incumplimientos en los cinco conteos de validación.
 
 El lanzador local está implementado y comprobado.
 La ejecución en Databricks permanece pendiente.
+
+## Tasas de BCRPData
+
+bcrpdata_schemas.py define el esquema de la respuesta JSON
+y DecimalType(20, 14) para conservar las tasas sin redondearlas.
+
+bcrpdata_transform.py implementa:
+
+1. Lectura de una observación por fila.
+2. Conversión de fechas con meses en español.
+3. Conversión de tasas sin pérdida de precisión.
+4. Adición de procedencia y fecha real de extracción.
+5. Validación de fechas, tasas, disponibilidad y claves.
+6. Escritura Delta y comparación de tipos y valores.
+
+La serie PD04638PD representa el tipo de cambio interbancario
+de venta, expresado en PEN por USD.
+
+Los valores no disponibles conservan raw_value,
+con rate_pen_per_usd nulo y available=false.
+No se rellenan tasas ni se eliminan estas observaciones.
+
+La ejecución 60e748db-73a1-4bf1-8a79-74e8b5715c62 verificó
+195 observaciones: 184 disponibles y 11 no disponibles.
+No se detectaron filas inválidas ni claves duplicadas.
+La lectura Delta conservó los tipos y valores normalizados.
+
+Los resultados locales se conservaron en:
+data/validation/silver_bcrpdata/run_id=60e748db-73a1-4bf1-8a79-74e8b5715c62/
+
+El lanzador reutilizable y la ejecución en Databricks
+permanecen pendientes.
