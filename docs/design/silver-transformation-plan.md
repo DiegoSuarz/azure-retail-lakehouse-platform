@@ -13,8 +13,8 @@ Después ejecutar y verificar el proceso en Azure Databricks.
 La lógica de transformación recibirá DataFrames.
 Las rutas y la configuración de sesión permanecerán separadas.
 
-Databricks Runtime 16.4 LTS es un candidato pendiente de confirmar.
-La validación local no sustituye las pruebas del runtime seleccionado.
+Las cargas se verificaron en Databricks Runtime 16.4 LTS,
+con Spark 3.5.2 y zona horaria UTC.
 
 ## Tablas previstas
 
@@ -66,7 +66,7 @@ No requiere nanosAsLong ni división manual.
 
 Las once columnas temporales de la carga inicial se comprobaron
 con PyArrow: sus valores son representables en microsegundos sin pérdida.
-La lectura completa con Spark se verificará para las cinco entidades.
+La lectura completa con Spark se verificó para las cinco entidades.
 
 La nulabilidad mostrada por el lector no sustituye las reglas
 de obligatoriedad del contrato: se comprobarán explícitamente.
@@ -77,10 +77,10 @@ de obligatoriedad del contrato: se comprobarán explícitamente.
 - Campos obligatorios presentes.
 - Claves positivas y sin duplicados.
 - Referencias entre las cinco entidades válidas.
-- Fechas y reglas comerciales coherentes.
-- Todos los pedidos con líneas válidas.
-- Conteos y valores reconciliados contra la entrada aceptada.
-- Importes y unidades coincidentes con los controles de M5.
+- created_at y updated_at informados, con updated_at >= created_at.
+- Valores comerciales compatibles con las reglas implementadas.
+- Todos los pedidos con al menos una línea.
+- Tipos y valores conservados después de escribir y leer Delta.
 
 No se corregirán valores comerciales por suposición.
 Si falla un control requerido, la carga no se declarará aceptada.
@@ -93,15 +93,12 @@ La aceptación del conjunto completo requerirá comprobar las cinco tablas.
 Todos los campos comerciales de las cinco tablas son obligatorios.
 La nulabilidad del esquema de lectura no autoriza valores nulos.
 
-Se comprobarán también las claves alternativas:
+La carga Silver simplificada comprueba las claves primarias.
+No incluye validación de unicidad de category_name, sku ni email.
+Las restricciones UNIQUE del origen siguen definidas en SQL Server.
 
-- categories: category_name.
-- products: sku.
-- customers: email.
-
-La comparación de textos deberá definir explícitamente su tratamiento
-respecto a la intercalación del origen; no se supondrá equivalencia
-entre la comparación de Spark y la de SQL Server.
+Tampoco reproduce la intercalación de SQL Server ni integra
+una reconciliación automática de importes y unidades con M5.
 
 ## Procedencia de las tablas SQL
 
@@ -124,7 +121,7 @@ En Azure, identificará el archivo leído desde ADLS.
 
 ## Política de escritura inicial
 
-M7 creará las tablas con errorifexists.
+M7 utiliza mode("error") para rechazar destinos existentes.
 No se utilizará append ni overwrite para repetir la carga inicial.
 
 Las rutas Silver cloud serán las rutas estables del diseño.
@@ -141,9 +138,13 @@ La actualización incremental de tablas existentes corresponde a M8.
 
 ## Estado
 
-Alcance de ocho tablas definido.
-Tipos, controles, procedencia y escritura inicial definidos para SQL Server.
-Lectura de categories comprobada con Spark local.
+Ocho tablas Delta cargadas y verificadas en Azure Databricks,
+con 8667 filas en total y registro en Unity Catalog.
+SQL Server superó 26 controles integrados.
+DummyJSON, el mapeo y BCRPData superaron sus validaciones.
 
-Contratos detallados de API y mapeo pendientes.
-Implementación de transformaciones y validación integrada pendientes.
+La verificación de rutas e importaciones tras reubicar los notebooks
+se realizará al iniciar M8. La integración de M7 en main sigue pendiente.
+
+Resultados y limitaciones:
+[Documentación de M7](../modules/m7-silver-transformation.md).
