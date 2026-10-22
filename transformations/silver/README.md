@@ -99,7 +99,7 @@ una ejecución parcial no se declarará completada.
 ## Estado
 
 Ocho tablas Silver cargadas, verificadas y registradas en Azure.
-Ejecución manual desde notebooks; integración en main pendiente.
+Ejecución manual desde notebooks; integrada en main mediante el PR #13.
 
 Se comprobaron el acceso a Bronze y la escritura y lectura Delta
 en Silver desde el cómputo clásico de Databricks.
@@ -125,7 +125,7 @@ data/validation/silver_sqlserver/run_id=1b1a6fd6-cb9b-4917-a651-20baeec5fd93/
 
 La comprobación corresponde a una ejecución local.
 La ejecución posterior en Databricks está documentada al final.
-El cierre de M7 y su integración en main siguen pendientes.
+M7 está completado e integrado en main mediante el PR #13.
 
 ## Ejecución local
 

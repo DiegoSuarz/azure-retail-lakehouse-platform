@@ -198,4 +198,4 @@ significados distintos y se conservarán por separado.
 Modelo definido en M2.1 e implementado en SQL Server durante M2.
 La carga inicial se extrajo y validó en Bronze durante M5.
 Las ocho tablas Silver se cargaron y verificaron en Azure durante M7.
-El cierre y la integración de M7 en main siguen pendientes.
+M7 está completado e integrado en main mediante el PR #13.

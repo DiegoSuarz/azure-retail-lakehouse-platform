@@ -20,7 +20,7 @@ en ventanas de uso de Azure para controlar los costos.
 | M4 | ADF, SHIR y fundamentos de orquestación | Completado |
 | M5 | Ingesta inicial y cargas a Bronze | Completado |
 | M6 | Reglas de calidad, validaciones y cuarentena | Completado |
-| M7 | Transformaciones PySpark y tablas Delta en Silver | En progreso: carga Azure verificada, cierre pendiente |
+| M7 | Transformaciones PySpark y tablas Delta en Silver | Completado |
 | M8 | CDC simulado, incrementales e idempotencia | Pendiente |
 | M9 | Modelo estrella y capa Gold | Pendiente |
 | M10 | Dimensiones con SCD tipo 1 y tipo 2 | Pendiente |
@@ -110,8 +110,8 @@ M5 está completado e integrado en main.
 SQL Server, lotes sintéticos y API disponen de entradas verificadas en Bronze.
 M6 está completado e integrado en main.
 M7 dispone de ocho tablas Silver verificadas en Azure Databricks
-y registradas en Unity Catalog. Su cierre e integración en main
-siguen pendientes.
+y registradas en Unity Catalog. M7 está completado e integrado
+en main mediante el PR #13, commit b2ec735.
 El siguiente módulo previsto es M8: CDC simulado, incrementales
 e idempotencia. Gold y el consumo analítico siguen pendientes.
 
