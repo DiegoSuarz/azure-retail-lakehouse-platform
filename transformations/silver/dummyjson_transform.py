@@ -101,7 +101,7 @@ def write_dummyjson_delta(spark, products, silver_root):
     """Escribe el catálogo externo y verifica tipos y valores."""
     target = f"{silver_root.rstrip('/')}/external/dummyjson_products"
 
-    products.write.format("delta").mode("errorifexists").save(target)
+    products.write.format("delta").mode("error").save(target)
 
     recovered = (
         spark.read.format("delta")

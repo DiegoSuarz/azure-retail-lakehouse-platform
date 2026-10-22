@@ -99,7 +99,7 @@ def write_product_mapping_delta(spark, mapping, silver_root):
     """Escribe las asociaciones y verifica tipos y valores."""
     target = f"{silver_root.rstrip('/')}/reference/product_external_mapping"
 
-    mapping.write.format("delta").mode("errorifexists").save(target)
+    mapping.write.format("delta").mode("error").save(target)
 
     recovered = (
         spark.read.format("delta")

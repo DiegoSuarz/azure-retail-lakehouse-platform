@@ -198,42 +198,7 @@ def write_bcrpdata_delta(spark, observations, silver_root):
     """Escribe las tasas y verifica los tipos y valores recuperados."""
     target = f"{silver_root.rstrip('/')}/reference/exchange_rates"
 
-    observations.write.format("delta").mode("errorifexists").save(target)
-
-    recovered = (
-        spark.read.format("delta")
-        .load(target)
-        .select(*observations.columns)
-    )
-
-    expected_types = [
-        (field.name, field.dataType) for field in observations.schema
-    ]
-    actual_types = [
-        (field.name, field.dataType) for field in recovered.schema
-    ]
-    if actual_types != expected_types:
-        raise ValueError("BCRPData: tipos diferentes después de escribir")
-
-    if (
-        observations.exceptAll(recovered).count() != 0
-        or recovered.exceptAll(observations).count() != 0
-    ):
-        raise ValueError("BCRPData: datos diferentes después de escribir")
-
-    return {
-        "entity": "exchange_rates",
-        "path": target,
-        "row_count": recovered.count(),
-        "verified": True,
-    }
-
-
-def write_bcrpdata_delta(spark, observations, silver_root):
-    """Escribe las tasas y verifica los tipos y valores recuperados."""
-    target = f"{silver_root.rstrip('/')}/reference/exchange_rates"
-
-    observations.write.format("delta").mode("errorifexists").save(target)
+    observations.write.format("delta").mode("error").save(target)
 
     recovered = (
         spark.read.format("delta")

@@ -95,7 +95,7 @@ def write_sqlserver_delta(spark, frames, silver_root):
     for entity, frame in frames.items():
         target = f"{silver_root.rstrip('/')}/techretail/{entity}"
 
-        frame.write.format("delta").mode("errorifexists").save(target)
+        frame.write.format("delta").mode("error").save(target)
 
         recovered = (
             spark.read.format("delta")
