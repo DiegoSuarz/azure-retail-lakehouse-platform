@@ -38,8 +38,8 @@ Serverless no se utilizó para las cargas Silver completadas.
 - Subredes delegadas a Microsoft.Databricks/workspaces.
 - NSG asociado durante el despliegue de Databricks.
 - Secure Cluster Connectivity: nodos sin IP pública.
-- NAT Gateway Standard: nat-arlp-dev-databricks.
-- IP pública de salida: pip-arlp-dev-databricks.
+- NAT Gateway Standard utilizado: nat-arlp-dev-databricks; eliminado al finalizar la sesión.
+- IP pública utilizada: pip-arlp-dev-databricks; eliminada al finalizar la sesión.
 - Service endpoints de Microsoft.Storage en ambas subredes.
 - Firewall de ADLS con denegación por defecto y subredes autorizadas.
 
@@ -109,6 +109,14 @@ El tiempo real de uso debe consultarse en Azure Cost Management.
 La terminación del cómputo no elimina el NAT Gateway,
 su IP pública ni el almacenamiento.
 
-El NAT Gateway y su IP pública siguen desplegados al cierre de
-esta sesión y generan cargos independientes del cómputo.
-Su retirada deberá preservar la VNet, los datos y el código.
+El NAT Gateway y su IP pública se eliminaron al finalizar la sesión.
+El cómputo quedó detenido y se conservaron la VNet, las subredes,
+el NSG, el workspace, la identidad y los datos.
+
+Antes de iniciar el cómputo en M8:
+
+1. Crear una IP pública Standard y un NAT Gateway Standard.
+2. Asociar la IP pública al NAT Gateway.
+3. Asociar el NAT Gateway a ambas subredes de Databricks.
+
+La nueva IP pública puede diferir de la utilizada en esta sesión.

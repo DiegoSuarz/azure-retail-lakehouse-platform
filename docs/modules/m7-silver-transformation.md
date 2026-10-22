@@ -117,12 +117,14 @@ Su limpieza se realizará después del primer release con Gold.
 El clúster quedó detenido al finalizar la sesión.
 Los datos Delta y el registro de tablas permanecen conservados.
 
-El NAT Gateway y su IP pública siguen desplegados.
-Sus cargos son independientes del estado del clúster.
+El NAT Gateway y su IP pública se eliminaron al finalizar la sesión.
+Se conservaron la VNet, las subredes, el workspace y los datos.
+Antes de iniciar el cómputo en M8 se recrearán ambos recursos
+y se asociará el NAT Gateway a las dos subredes.
 
 La estimación previa no representa el gasto real de la sesión.
-La revisión de consumos efectivos y la retirada temporal de red
-siguen pendientes.
+La revisión del costo definitivo queda pendiente hasta que
+Azure Cost Management refleje los consumos de la sesión.
 
 ## Estado
 
@@ -130,9 +132,14 @@ Carga inicial Silver verificada en Azure y registrada en Unity Catalog.
 Código y notebooks publicados en feature/m7-silver-transformation.
 
 Pendientes de cierre:
-- Verificar las rutas e importaciones de los notebooks reubicados.
-- Revisar el diff final y completar la revisión operativa.
+
+- Revisar el diff final.
 - Integrar la rama en main mediante pull request.
+
+Seguimiento al iniciar M8:
+
+- Restablecer el NAT Gateway y su IP pública antes de iniciar el cómputo.
+- Verificar las rutas e importaciones de los notebooks reubicados.
 
 El siguiente módulo previsto es M8:
 CDC simulado, incrementales e idempotencia.
