@@ -1,88 +1,114 @@
 # Azure Databricks para desarrollo
 
-## Objetivo
+## Objetivo y estado
 
-Ejecutar en Azure las transformaciones Silver verificadas localmente.
-Los datos persistirán en ADLS Gen2.
+Workspace desplegado desde Azure Portal.
+Las ocho tablas Silver se escribieron en ADLS Gen2,
+se verificaron mediante lectura Delta y se registraron en Unity Catalog.
 
-## Configuración propuesta
+La ejecución fue manual desde notebooks.
+La orquestación automática no forma parte de esta carga inicial.
+
+## Configuración comprobada
 
 | Componente | Configuración |
 |---|---|
 | Grupo de recursos | rg-arlp-dev |
 | Región | East US |
 | Workspace | dbw-arlp-dev-diego01 |
+| Grupo administrado | rg-arlp-dev-databricks-managed |
 | Nivel | Premium |
-| Cómputo | Single node |
-| Tamaño candidato | Standard_D4ds_v4 |
-| Alternativas | Standard_D4s_v4, Standard_D4as_v4 |
+| Tipo de workspace | Hybrid |
+| Cómputo | cmp-arlp-dev-silver |
+| Topología | Single node |
+| Máquina | Standard_D4ds_v4: 4 núcleos y 16 GB |
+| Runtime | 16.4 LTS, Spark 3.5.2 y Scala 2.13 |
+| Photon | Desactivado |
 | Terminación por inactividad | 15 minutos |
-| Runtime candidato | 16.4 LTS, pendiente de confirmar |
 | Zona horaria Spark | UTC |
 
-Los tres tamaños candidatos no presentan restricciones en la
-consulta de Azure. Su disponibilidad en Databricks y capacidad
-real siguen pendientes de comprobar.
-
-La cuota regional es de 6 vCPU y la cuota de cada familia
-candidata es de 4 vCPU. Se utilizará un único nodo.
+Se utilizó cómputo clásico conectado a la VNet del proyecto.
+Serverless no se utilizó para las cargas Silver completadas.
 
 ## Red
 
-- VNet propia con dos subredes dedicadas a Databricks.
-- Conectividad segura del clúster, sin IP pública en los nodos.
-- NAT Gateway e IP pública Standard para salida a Internet.
-- Service endpoints de Microsoft.Storage en las subredes.
-- Reglas de Storage para permitir las subredes autorizadas.
-- Mantener el firewall de ADLS con denegación por defecto.
+- VNet: vnet-arlp-dev-databricks, 10.40.0.0/16.
+- Subred host: snet-databricks-host, 10.40.1.0/24.
+- Subred container: snet-databricks-container, 10.40.2.0/24.
+- Subredes delegadas a Microsoft.Databricks/workspaces.
+- NSG asociado durante el despliegue de Databricks.
+- Secure Cluster Connectivity: nodos sin IP pública.
+- NAT Gateway Standard: nat-arlp-dev-databricks.
+- IP pública de salida: pip-arlp-dev-databricks.
+- Service endpoints de Microsoft.Storage en ambas subredes.
+- Firewall de ADLS con denegación por defecto y subredes autorizadas.
 
-La IP pública del NAT corresponde a la salida de la red,
-no a una IP pública asignada a cada nodo.
+La IP pública del NAT proporciona salida a Internet,
+no está asignada directamente a los nodos.
 
-## Acceso a datos
+## Identidad y permisos
 
-Se utilizará un Access Connector con identidad administrada
-y credenciales de almacenamiento de Unity Catalog.
+Access Connector: ac-arlp-dev-databricks.
+Autenticación mediante identidad administrada asignada por el sistema.
 
-Permisos iniciales previstos por contenedor:
+| Ámbito | Rol de la identidad |
+|---|---|
+| Cuenta starlpdevdiego01 | Storage Blob Delegator |
+| Contenedor bronze | Storage Blob Data Reader |
+| Contenedor silver | Storage Blob Data Contributor |
 
-- bronze: Storage Blob Data Reader.
-- silver: Storage Blob Data Contributor.
+Storage Blob Delegator permite solicitar las claves de delegación
+necesarias para el acceso temporal a los datos.
+Los permisos de lectura y escritura se mantienen por contenedor.
 
-Los permisos para otras capas se incorporarán cuando sean necesarios.
-No se utilizarán claves compartidas de Storage.
+No se utilizaron claves compartidas de almacenamiento.
 
-## Operación y costos
+## Unity Catalog
 
-El cómputo se iniciará únicamente durante las sesiones de trabajo.
-Se terminará al finalizar cada sesión.
+Credencial de almacenamiento: cred_arlp_adls.
 
-El NAT Gateway y su IP pública pueden generar cargos aunque
-el cómputo esté detenido. Se retirarán al cerrar la ventana temporal,
-siguiendo un procedimiento que preserve los datos y el código.
+| Ubicación externa | Destino | Acceso |
+|---|---|---|
+| loc_arlp_bronze | abfss://bronze@starlpdevdiego01.dfs.core.windows.net/ | Solo lectura |
+| loc_arlp_silver | abfss://silver@starlpdevdiego01.dfs.core.windows.net/ | Lectura y escritura |
 
-La estimación deberá incluir DBU, máquina virtual, discos,
-NAT Gateway, IP pública y almacenamiento administrado.
+Los eventos de archivos y fallback mode permanecen desactivados.
 
-## Estado
+Catálogo: dbw_arlp_dev_diego01.
 
-Propuesta de despliegue. No se han creado recursos de Databricks.
+- silver_techretail: cinco tablas de SQL Server.
+- silver_external: productos de DummyJSON.
+- silver_reference: mapeo de productos y tipos de cambio.
 
-Pendientes antes de desplegar:
+Las tablas son externas: sus archivos Delta permanecen en ADLS.
 
-- Verificar los recursos reales frente a la estimación provisional.
-- Confirmar runtime y tamaño ofrecidos por Databricks.
-- Verificar permisos para crear recursos y asignar roles.
-- Definir los comandos de despliegue y retirada.
-- Confirmar habilitación y permisos de Unity Catalog.
+## Código y operación
 
-El crédito mostrado el 20 de octubre de 2026 es USD 95.46.
-Su vencimiento permanece pendiente de confirmar.
+Los notebooks se encuentran en notebooks/silver/ y reutilizan
+los módulos de transformations/silver/.
 
-## Estimación provisional
+GitHub está conectado mediante una cuenta vinculada
+y la aplicación de Databricks autorizada para el repositorio.
 
-El escenario inicial considera dos horas de cómputo y 24 horas de red.
-Su referencia ajustada es aproximadamente USD 3.40, o USD 4.08 con margen del 20 %.
+Las cargas iniciales usan mode("error") para impedir sobrescrituras.
+Las escrituras de distintas tablas son independientes.
+La actualización incremental se abordará en M8.
 
-Supuestos y limitaciones:
+El cómputo quedó detenido al finalizar la sesión de carga.
+Los datos persistentes permanecen en ADLS.
+
+La reorganización posterior de los notebooks superó la comprobación
+de sintaxis, sus nuevas rutas aún no se han probado en Databricks.
+
+## Costos y recursos persistentes
+
+La estimación inicial es provisional y no representa el gasto real:
 [Estimación de Databricks](../../docs/costs/M7.7-estimacion-databricks.md).
+
+El tiempo real de uso debe consultarse en Azure Cost Management.
+La terminación del cómputo no elimina el NAT Gateway,
+su IP pública ni el almacenamiento.
+
+El NAT Gateway y su IP pública siguen desplegados al cierre de
+esta sesión y generan cargos independientes del cómputo.
+Su retirada deberá preservar la VNet, los datos y el código.

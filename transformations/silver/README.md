@@ -87,22 +87,22 @@ no formarán parte de la carga simplificada.
 Se mantienen los cinco esquemas, los validadores esenciales
 y la arquitectura prevista de ocho tablas Silver.
 
-## Siguiente entregable
+## Carga integrada
 
-Integrar lectura, obligatoriedad, validación, procedencia,
+La carga integra lectura, obligatoriedad, validación, procedencia,
 escritura Delta y comparación de los datos recuperados.
 
-La escritura inicial utilizará errorifexists.
+La escritura inicial utilizará mode("error").
 Las escrituras de varias tablas no constituyen una transacción única;
 una ejecución parcial no se declarará completada.
 
 ## Estado
 
-Esquemas y validadores esenciales comprobados por separado.
-Carga integrada y tablas Silver del proyecto pendientes.
+Ocho tablas Silver cargadas, verificadas y registradas en Azure.
+Ejecución manual desde notebooks; integración en main pendiente.
 
-Las pruebas locales no verifican permisos ni acceso a ADLS.
-La ejecución integrada en Databricks sigue pendiente.
+Se comprobaron el acceso a Bronze y la escritura y lectura Delta
+en Silver desde el cómputo clásico de Databricks.
 
 ## Primera carga integrada local
 
@@ -124,7 +124,8 @@ Las tablas y report.json se conservaron en:
 data/validation/silver_sqlserver/run_id=1b1a6fd6-cb9b-4917-a651-20baeec5fd93/
 
 La comprobación corresponde a una ejecución local.
-La ejecución en Databricks y el cierre de M7 siguen pendientes.
+La ejecución posterior en Databricks está documentada al final.
+El cierre de M7 y su integración en main siguen pendientes.
 
 ## Ejecución local
 
@@ -161,7 +162,7 @@ dummyjson_transform.py implementa:
 2. Extracción de una fila por producto mediante explode.
 3. Normalización de nombres y adición de procedencia.
 4. Validación de campos esenciales y unicidad de la clave.
-5. Escritura Delta con errorifexists y comparación de tipos y valores.
+5. Escritura Delta con mode("error") y comparación de tipos y valores.
 
 Los campos opcionales ausentes permanecen nulos.
 external_currency_code permanece nulo porque la fuente no declara moneda.
@@ -176,7 +177,7 @@ Las tablas y report.json se conservaron en:
 data/validation/silver_dummyjson/run_id=cfe8f239-fdaf-404b-a629-7ca35d63eb2b/
 
 La comprobación corresponde al entorno local.
-El lanzador reutilizable y la ejecución en Databricks siguen pendientes.
+El lanzador local y la carga en Databricks se completaron posteriormente.
 
 ## Ejecución local de DummyJSON
 
@@ -197,7 +198,7 @@ El informe completed se genera después de verificar la tabla.
 La ejecución e53042a4-f37f-4481-a27f-7cf83bea82ae verificó 38 productos,
 sin filas inválidas ni grupos duplicados.
 El lanzador local está implementado y comprobado.
-La ejecución en Databricks permanece pendiente.
+La ejecución en Databricks está completada y se resume al final.
 
 ## Mapeo externo de productos
 
@@ -225,7 +226,7 @@ El informe registra las rutas de ambos catálogos utilizados.
 La salida local se conservó en:
 data/validation/silver_product_mapping/run_id=e9f8cd2d-3780-4f66-933b-6cfd48b3acf7/
 
-El lanzador reutilizable y la ejecución en Databricks siguen pendientes.
+El lanzador local y la carga en Databricks se completaron posteriormente.
 
 ## Ejecución local del mapeo
 
@@ -248,7 +249,7 @@ La ejecución cf0fd697-681d-4e44-ac2d-66ec8d01e396 verificó seis
 asociaciones, sin incumplimientos en los cinco conteos de validación.
 
 El lanzador local está implementado y comprobado.
-La ejecución en Databricks permanece pendiente.
+La ejecución en Databricks está completada y se resume al final.
 
 ## Tasas de BCRPData
 
@@ -279,8 +280,7 @@ La lectura Delta conservó los tipos y valores normalizados.
 Los resultados locales se conservaron en:
 data/validation/silver_bcrpdata/run_id=60e748db-73a1-4bf1-8a79-74e8b5715c62/
 
-El lanzador reutilizable y la ejecución en Databricks
-permanecen pendientes.
+El lanzador local y la carga en Databricks se completaron posteriormente.
 
 ## Ejecución local de BCRPData
 
@@ -307,4 +307,71 @@ La ejecución 7ce7eb97-03c9-4027-b6c7-cec45d833eb5 verificó
 No se detectaron filas inválidas ni claves duplicadas.
 
 El lanzador local está implementado y comprobado.
-La ejecución en Databricks permanece pendiente.
+La ejecución en Databricks está completada y se resume al final.
+
+
+## Carga inicial verificada en Azure Databricks
+
+Las cargas se ejecutaron manualmente con cmp-arlp-dev-silver:
+Runtime 16.4 LTS, Spark 3.5.2 y zona horaria UTC.
+
+Los módulos reutilizables permanecen en transformations/silver/.
+Los cuatro notebooks están en notebooks/silver/.
+
+### Tablas registradas
+
+Catálogo: dbw_arlp_dev_diego01.
+Las rutas de la tabla siguiente son relativas al contenedor silver.
+
+| Esquema | Tabla | Ruta Delta | Filas |
+|---|---|---|---:|
+| silver_techretail | categories | techretail/categories | 6 |
+| silver_techretail | products | techretail/products | 60 |
+| silver_techretail | customers | techretail/customers | 500 |
+| silver_techretail | orders | techretail/orders | 2000 |
+| silver_techretail | order_items | techretail/order_items | 5862 |
+| silver_external | dummyjson_products | external/dummyjson_products | 38 |
+| silver_reference | product_external_mapping | reference/product_external_mapping | 6 |
+| silver_reference | exchange_rates | reference/exchange_rates | 195 |
+| Total | | | 8667 |
+
+Todas se registraron como tablas externas en Unity Catalog.
+El registro no volvió a escribir los archivos Delta existentes.
+
+### Ejecuciones verificadas
+
+| Carga | processing_run_id |
+|---|---|
+| SQL Server | 3defe509-c47d-467f-9551-3adb3945a482 |
+| DummyJSON | b0b9eecd-6ddb-4122-ac80-e39e379a3546 |
+| Mapeo | 878d25eb-1872-48b7-988a-39039e54b590 |
+| BCRPData | fbb2f7c0-9a75-4d47-8a8c-5791b638fa57 |
+
+SQL Server superó los 26 controles integrados.
+DummyJSON conservó 38 productos de nueve archivos.
+El mapeo validó seis asociaciones contra ambos catálogos.
+BCRPData conservó 184 tasas disponibles y 11 no disponibles.
+
+Las funciones de escritura compararon tipos y valores recuperados
+mediante Delta, utilizando exceptAll en ambas direcciones.
+
+### Ajustes de compatibilidad
+
+- mode("error") para impedir sobrescrituras.
+- _metadata.file_path para obtener la procedencia de los JSON.
+- Storage Blob Delegator a nivel de cuenta para la identidad del connector.
+- Conexión explícita del notebook a cmp-arlp-dev-silver.
+
+### Alcance y ejecución
+
+Es una carga inicial; no implementa actualización incremental.
+Las escrituras entre tablas no forman una transacción única.
+No debe repetirse Run all sobre los destinos existentes.
+
+Los notebooks se reorganizaron después de las cargas.
+Sus celdas superaron la comprobación de sintaxis;
+las nuevas rutas todavía no se han probado en Databricks.
+
+El cómputo quedó detenido al finalizar.
+La automatización de cargas, CDC e idempotencia quedan para
+los módulos correspondientes del roadmap.
