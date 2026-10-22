@@ -129,12 +129,9 @@ Azure Cost Management refleje los consumos de la sesión.
 ## Estado
 
 Carga inicial Silver verificada en Azure y registrada en Unity Catalog.
-Código y notebooks publicados en feature/m7-silver-transformation.
-
-Pendientes de cierre:
-
-- Revisar el diff final.
-- Integrar la rama en main mediante pull request.
+M7 completado e integrado en main mediante el
+[PR #13](https://github.com/DiegoSuarz/azure-retail-lakehouse-platform/pull/13),
+commit b2ec735.
 
 Seguimiento al iniciar M8:
 

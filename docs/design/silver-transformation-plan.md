@@ -144,7 +144,8 @@ SQL Server superó 26 controles integrados.
 DummyJSON, el mapeo y BCRPData superaron sus validaciones.
 
 La verificación de rutas e importaciones tras reubicar los notebooks
-se realizará al iniciar M8. La integración de M7 en main sigue pendiente.
+se realizará al iniciar M8. M7 está integrado en main
+mediante el PR #13, commit b2ec735.
 
 Resultados y limitaciones:
 [Documentación de M7](../modules/m7-silver-transformation.md).
