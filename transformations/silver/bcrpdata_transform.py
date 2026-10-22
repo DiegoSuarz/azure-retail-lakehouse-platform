@@ -13,7 +13,7 @@ def read_bcrpdata_observations(spark, source_path):
         .option("multiLine", True)
         .option("mode", "FAILFAST")
         .json(source_path)
-        .withColumn("source_file", F.input_file_name())
+        .withColumn("source_file", F.col("_metadata.file_path"))
     )
 
     if response.filter(F.col("periods").isNull()).limit(1).count():

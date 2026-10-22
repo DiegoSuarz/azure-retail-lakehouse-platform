@@ -18,7 +18,7 @@ def read_dummyjson_products(spark, bronze_root):
         .option("multiLine", True)
         .option("mode", "FAILFAST")
         .json(pattern)
-        .withColumn("source_file", F.input_file_name())
+        .withColumn("source_file", F.col("_metadata.file_path"))
     )
 
     if pages.filter(F.col("products").isNull()).limit(1).count():
