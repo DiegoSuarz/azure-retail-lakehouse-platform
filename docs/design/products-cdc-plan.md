@@ -77,5 +77,28 @@ se detendrá el proceso para revisar la recuperación.
 ## Estado
 
 Diseño inicial definido.
-CDC todavía no habilitado.
+CDC habilitado y configuración verificada; pruebas funcionales pendientes.
 Databricks permanece detenido durante la preparación local.
+
+## Habilitación verificada — M8.1
+
+El 23 de octubre de 2026 se habilitó CDC en TechRetail_OLTP
+y exclusivamente en dbo.products.
+
+Configuración:
+
+- SQL Server Enterprise Developer, versión 17.0.1145.4.
+- SQL Server Agent en ejecución, con inicio manual.
+- Instancia de captura: dbo_products.
+- Nueve columnas comerciales capturadas.
+- Rol de acceso: cdc_products_reader.
+- supports_net_changes = 0.
+- Captura continua, con pollinginterval = 5 segundos.
+- Retención de limpieza: 4320 minutos, equivalentes a tres días.
+
+Los trabajos de captura y limpieza se crearon e iniciaron correctamente.
+sys.dm_cdc_errors no devolvió errores.
+La tabla conservó sus 60 productos.
+
+La habilitación está verificada; la captura funcional de inserciones,
+actualizaciones y eliminaciones se comprobará en M8.2.
