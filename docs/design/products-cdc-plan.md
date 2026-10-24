@@ -102,3 +102,41 @@ La tabla conservó sus 60 productos.
 
 La habilitación está verificada; la captura funcional de inserciones,
 actualizaciones y eliminaciones se comprobará en M8.2.
+
+## Captura y extracción verificadas — M8.2 y M8.3
+
+Se conservó una base inicial de 60 productos con el LSN:
+0x00000033000016f80003.
+
+La prueba generó cuatro eventos reales:
+
+| Operación CDC | Producto | Precio |
+|---|---:|---:|
+| Inserción, código 2 | 61 | 2500.00 |
+| Inserción, código 2 | 62 | 3000.00 |
+| Actualización, código 4 | 61 | 2600.00 |
+| Eliminación, código 1 | 62 | 3000.00 |
+
+El origen terminó con 61 productos.
+Los cambios de prueba se limitaron a los productos 61 y 62.
+
+extract_products_cdc.py consulta los cambios mediante las funciones CDC,
+conservando las nueve columnas comerciales y los metadatos de orden.
+
+El primer lote guardó cuatro eventos hasta el LSN:
+0x0000003300004cb80003.
+
+El checkpoint de extracción se actualiza después de guardar el lote.
+Una segunda ejecución guardó cero eventos y conservó el mismo LSN.
+Se verificó que el primer lote permaneciera disponible.
+
+Archivos locales, excluidos de Git:
+
+- data/validation/cdc_products/baseline.json
+- data/validation/cdc_products/batch_001.json
+- data/validation/cdc_products/batch_002.json
+- data/validation/cdc_products/extraction_checkpoint.json
+
+La ejecución es manual y secuencial, sin extractores simultáneos.
+La recuperación ante fallos todavía debe probarse.
+Los eventos aún no se han aplicado a Delta.
