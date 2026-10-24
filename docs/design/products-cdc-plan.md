@@ -77,7 +77,8 @@ se detendrá el proceso para revisar la recuperación.
 ## Estado
 
 Diseño inicial definido.
-CDC habilitado y configuración verificada; pruebas funcionales pendientes.
+Captura real de inserciones, actualización y eliminación verificada.
+Extracción por LSN y continuidad comprobadas; aplicación a Delta pendiente.
 Databricks permanece detenido durante la preparación local.
 
 ## Habilitación verificada — M8.1
