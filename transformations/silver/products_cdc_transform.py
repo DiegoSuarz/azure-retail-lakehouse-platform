@@ -140,3 +140,127 @@ def apply_product_changes(spark, batch, target_path):
         "event_count": len(events),
         "affected_products": len(records),
     }
+
+
+def validate_application_order(batch, last_applied_lsn):
+    """Comprueba que un lote continúe desde la posición aplicada."""
+    start = bytes.fromhex(batch["after_lsn"][2:])
+    end = bytes.fromhex(batch["to_lsn"][2:])
+    current = bytes.fromhex(last_applied_lsn[2:])
+
+    if any(len(value) != 10 for value in (start, end, current)):
+        raise ValueError("Las posiciones LSN deben contener diez bytes.")
+
+    if end < start:
+        raise ValueError("El límite final del lote es anterior al inicial.")
+
+    if start < current:
+        raise ValueError(
+            "Lote anterior o solapado: no se permite sobrescribir "
+            "el estado ya aplicado."
+        )
+
+    if start > current:
+        raise ValueError(
+            "Falta un intervalo anterior: el lote no continúa "
+            "desde el último LSN aplicado."
+        )
+
+    if start == end and batch["changes"]:
+        raise ValueError("Un intervalo vacío no puede contener eventos.")
+
+    return True
+
+
+def apply_product_batch(spark, batch, target_path, checkpoint):
+    """Controla orden, aplica el lote y verifica el estado final."""
+    import hashlib
+    import json
+
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            batch, sort_keys=True, ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+
+    if checkpoint["target_path"] != str(target_path):
+        raise ValueError("El checkpoint pertenece a otro destino.")
+
+    if (
+        batch.get("source_database") != "TechRetail_OLTP"
+        or batch.get("capture_instance") != "dbo_products"
+    ):
+        raise ValueError("El lote no corresponde a CDC de productos.")
+
+    if checkpoint.get("last_batch_sha256") == fingerprint:
+        if checkpoint["last_applied_lsn"] != batch["to_lsn"]:
+            raise ValueError("El checkpoint del lote repetido es incoherente.")
+        return {"status": "already_applied", "checkpoint": dict(checkpoint)}
+
+    validate_application_order(batch, checkpoint["last_applied_lsn"])
+
+    before = spark.read.format("delta").load(str(target_path))
+    columns = [field.name for field in PRODUCTS_SCHEMA]
+    before = before.select(*columns)
+    previous_rows = before.collect()
+
+    expected = {
+        row["product_id"]: row.asDict()
+        for row in previous_rows
+    }
+    if len(expected) != len(previous_rows):
+        raise ValueError("El destino contiene claves duplicadas.")
+
+    events = sorted(
+        batch["changes"],
+        key=lambda event: (
+            bytes.fromhex(event["commit_lsn"][2:]),
+            bytes.fromhex(event["sequence_value"][2:]),
+        ),
+    )
+    final_events = {}
+    for event in events:
+        if event["operation_code"] not in (1, 2, 4):
+            raise ValueError("Operación CDC no admitida.")
+        final_events[event["product_id"]] = event
+
+    remaining = []
+    for key, event in final_events.items():
+        if event["operation_code"] == 1:
+            expected.pop(key, None)
+        else:
+            remaining.append(event)
+
+    converted = products_to_dataframe(spark, remaining).collect()
+    for row in converted:
+        expected[row["product_id"]] = row.asDict()
+
+    expected_frame = spark.createDataFrame(
+        list(expected.values()), schema=PRODUCTS_SCHEMA
+    )
+
+    result = apply_product_changes(spark, batch, target_path)
+    current = (
+        spark.read.format("delta")
+        .load(str(target_path))
+        .select(*columns)
+    )
+
+    if (
+        expected_frame.exceptAll(current).count() != 0
+        or current.exceptAll(expected_frame).count() != 0
+    ):
+        raise ValueError("El resultado no coincide con el estado esperado.")
+
+    next_checkpoint = {
+        "target_path": str(target_path),
+        "last_applied_lsn": batch["to_lsn"],
+        "last_batch_sha256": fingerprint,
+    }
+
+    return {
+        "status": "applied",
+        "result": result,
+        "checkpoint": next_checkpoint,
+    }

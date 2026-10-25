@@ -79,7 +79,8 @@ se detendrá el proceso para revisar la recuperación.
 Diseño inicial definido.
 Captura real de inserciones, actualización y eliminación verificada.
 Extracción por LSN, continuidad y aplicación local a Delta verificadas.
-Reprocesamiento, recuperación y ejecución en Azure pendientes.
+Reprocesamiento, control de orden y recuperación simulada verificados localmente.
+Ejecución en Azure pendiente.
 Databricks permanece detenido durante la preparación local.
 
 ## Habilitación verificada — M8.1
@@ -171,3 +172,40 @@ los cuatro eventos originales permanecen en el archivo de extracción.
 No se actualizó todavía un checkpoint de aplicación.
 La protección frente a lotes antiguos y las pruebas de recuperación
 corresponden a M8.5. La ejecución en Azure permanece pendiente.
+
+## Idempotencia y recuperación verificadas — M8.5
+
+Se incorporaron control de continuidad por LSN y reconocimiento
+del último lote aplicado mediante SHA-256 de su contenido.
+
+Pruebas realizadas:
+
+- Reaplicar batch_001.json conservó todos los valores de los 61 productos.
+- Simular la pérdida del checkpoint después del MERGE permitió reintentar
+  desde la posición anterior sin diferencias en los datos.
+- Repetir el último lote con su checkpoint se omitió sin otro MERGE.
+- Un lote antiguo con contenido diferente se bloqueó antes de acceder a Spark.
+- La validación de orden rechazó saltos de intervalo.
+- El ejecutor procesó batch_002.json vacío, verificó los datos y guardó
+  el checkpoint sin avanzar el LSN.
+
+run_products_cdc_local.py utiliza un checkpoint de aplicación separado
+del checkpoint de extracción. Lo actualiza después de aplicar y verificar
+el lote.
+
+Checkpoint local, excluido de Git:
+data/validation/cdc_products/application_checkpoint.json
+
+Límites de la implementación:
+
+- Ejecución manual, secuencial y con checkpoint existente.
+- El MERGE y el checkpoint no forman una transacción conjunta.
+- La recuperación se comprobó descartando el checkpoint en memoria;
+  no mediante una caída real del proceso.
+- Solo se reconoce automáticamente la repetición exacta del último lote.
+  Los lotes anteriores se rechazan por orden.
+- La comparación completa recoge productos en memoria y está destinada
+  al conjunto pequeño de esta prueba.
+- El checkpoint presupone que el destino no se modifica por otros procesos.
+
+La ejecución en Azure permanece pendiente.
