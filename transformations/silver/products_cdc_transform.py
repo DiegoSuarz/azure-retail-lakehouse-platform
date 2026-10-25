@@ -58,7 +58,7 @@ def initialize_products_delta(spark, records, target_path):
     }
 
 
-def apply_product_changes(spark, batch, target_path):
+def apply_product_changes(spark, batch, target_path, provenance=None):
     """Aplica el último estado de cada producto dentro de un lote ordenado."""
     from delta.tables import DeltaTable
 
@@ -106,6 +106,9 @@ def apply_product_changes(spark, batch, target_path):
 
     records = list(latest.values())
     products = products_to_dataframe(spark, records)
+    if provenance is not None:
+        products = add_product_cdc_provenance(products, **provenance)
+
     operations = spark.createDataFrame(
         [
             (event["product_id"], event["operation_code"])
@@ -116,8 +119,8 @@ def apply_product_changes(spark, batch, target_path):
     source = products.join(operations, "product_id")
 
     values = {
-        field.name: f"source.{field.name}"
-        for field in PRODUCTS_SCHEMA
+        name: f"source.{name}"
+        for name in products.columns
     }
 
     target = DeltaTable.forPath(spark, str(target_path))
@@ -172,7 +175,7 @@ def validate_application_order(batch, last_applied_lsn):
     return True
 
 
-def apply_product_batch(spark, batch, target_path, checkpoint):
+def apply_product_batch(spark, batch, target_path, checkpoint, provenance=None):
     """Controla orden, aplica el lote y verifica el estado final."""
     import hashlib
     import json
@@ -201,7 +204,17 @@ def apply_product_batch(spark, batch, target_path, checkpoint):
     validate_application_order(batch, checkpoint["last_applied_lsn"])
 
     before = spark.read.format("delta").load(str(target_path))
-    columns = [field.name for field in PRODUCTS_SCHEMA]
+    commercial_columns = [field.name for field in PRODUCTS_SCHEMA]
+    technical_columns = [
+        "source_system", "ingestion_run_id", "processing_run_id",
+        "source_file", "processed_at",
+    ]
+    columns = commercial_columns + (
+        technical_columns if provenance is not None else []
+    )
+    if set(before.columns) != set(columns):
+        raise ValueError("Las columnas del destino no coinciden con el alcance.")
+
     before = before.select(*columns)
     previous_rows = before.collect()
 
@@ -232,15 +245,21 @@ def apply_product_batch(spark, batch, target_path, checkpoint):
         else:
             remaining.append(event)
 
-    converted = products_to_dataframe(spark, remaining).collect()
+    converted_frame = products_to_dataframe(spark, remaining)
+    if provenance is not None:
+        converted_frame = add_product_cdc_provenance(
+            converted_frame, **provenance
+        )
+
+    converted = converted_frame.collect()
     for row in converted:
         expected[row["product_id"]] = row.asDict()
 
     expected_frame = spark.createDataFrame(
-        list(expected.values()), schema=PRODUCTS_SCHEMA
+        list(expected.values()), schema=before.schema
     )
 
-    result = apply_product_changes(spark, batch, target_path)
+    result = apply_product_changes(spark, batch, target_path, provenance)
     current = (
         spark.read.format("delta")
         .load(str(target_path))
@@ -264,3 +283,23 @@ def apply_product_batch(spark, batch, target_path, checkpoint):
         "result": result,
         "checkpoint": next_checkpoint,
     }
+
+
+def add_product_cdc_provenance(
+    products,
+    source_file,
+    ingestion_run_id,
+    processing_run_id,
+    processed_at,
+):
+    """Añade la procedencia del lote CDC a los productos preparados."""
+    from pyspark.sql import functions as F
+
+    return (
+        products
+        .withColumn("source_system", F.lit("sqlserver"))
+        .withColumn("ingestion_run_id", F.lit(ingestion_run_id))
+        .withColumn("processing_run_id", F.lit(processing_run_id))
+        .withColumn("source_file", F.lit(source_file))
+        .withColumn("processed_at", F.lit(processed_at))
+    )
