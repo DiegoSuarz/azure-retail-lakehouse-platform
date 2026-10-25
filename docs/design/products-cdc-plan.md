@@ -78,7 +78,8 @@ se detendrá el proceso para revisar la recuperación.
 
 Diseño inicial definido.
 Captura real de inserciones, actualización y eliminación verificada.
-Extracción por LSN y continuidad comprobadas; aplicación a Delta pendiente.
+Extracción por LSN, continuidad y aplicación local a Delta verificadas.
+Reprocesamiento, recuperación y ejecución en Azure pendientes.
 Databricks permanece detenido durante la preparación local.
 
 ## Habilitación verificada — M8.1
@@ -141,3 +142,32 @@ Archivos locales, excluidos de Git:
 La ejecución es manual y secuencial, sin extractores simultáneos.
 La recuperación ante fallos todavía debe probarse.
 Los eventos aún no se han aplicado a Delta.
+
+## Aplicación local verificada — M8.4
+
+products_cdc_transform.py implementa:
+
+- Conversión de registros JSON al esquema comercial de productos.
+- Creación y comparación de la tabla Delta inicial.
+- Aplicación del último evento por producto mediante MERGE.
+
+Se creó una tabla local con los 60 productos de baseline.json.
+Se aplicó batch_001.json, con cuatro eventos sobre dos claves.
+
+Resultados comprobados:
+
+- 61 productos en el estado final.
+- Producto 61 presente, con precio 2600.00.
+- Producto 62 ausente.
+- Los 60 productos originales conservaron todos sus valores.
+- El estado final completo coincidió con el resultado esperado.
+
+La tabla de prueba se conserva en:
+data/validation/cdc_products/silver/products/
+
+La selección del último evento representa el estado vigente;
+los cuatro eventos originales permanecen en el archivo de extracción.
+
+No se actualizó todavía un checkpoint de aplicación.
+La protección frente a lotes antiguos y las pruebas de recuperación
+corresponden a M8.5. La ejecución en Azure permanece pendiente.
