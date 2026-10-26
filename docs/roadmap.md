@@ -21,7 +21,7 @@ en ventanas de uso de Azure para controlar los costos.
 | M5 | Ingesta inicial y cargas a Bronze | Completado |
 | M6 | Reglas de calidad, validaciones y cuarentena | Completado |
 | M7 | Transformaciones PySpark y tablas Delta en Silver | Completado |
-| M8 | CDC real de productos, incrementales e idempotencia | Verificado en local y Azure; integración pendiente |
+| M8 | CDC real de productos, incrementales e idempotencia | Completado |
 | M9 | Modelo estrella y capa Gold | Pendiente |
 | M10 | Dimensiones con SCD tipo 1 y tipo 2 | Pendiente |
 | M11 | MERGE, evolución de esquemas, time travel y retención | Pendiente |
@@ -114,7 +114,8 @@ y registradas en Unity Catalog. M7 está completado e integrado
 en main mediante el PR #13, commit b2ec735.
 M8 dispone de CDC real de productos, extracción por LSN y aplicación
 incremental a Delta verificadas en local y Azure.
-Su revisión final e integración en main siguen pendientes.
+M8 está completado e integrado en main mediante el PR #15,
+commit 212e996.
 El siguiente módulo previsto es M9: modelo estrella y capa Gold.
 Gold y el consumo analítico siguen pendientes.
 
