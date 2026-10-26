@@ -92,7 +92,8 @@ y la aplicación de Databricks autorizada para el repositorio.
 
 Las cargas iniciales usan mode("error") para impedir sobrescrituras.
 Las escrituras de distintas tablas son independientes.
-La actualización incremental se abordará en M8.
+M8 verificó la aplicación por lotes del CDC real de products
+mediante MERGE, con control de aplicación persistido en Delta.
 
 El cómputo quedó detenido al finalizar la sesión de carga.
 Los datos persistentes permanecen en ADLS.
@@ -113,10 +114,26 @@ El NAT Gateway y su IP pública se eliminaron al finalizar la sesión.
 El cómputo quedó detenido y se conservaron la VNet, las subredes,
 el NSG, el workspace, la identidad y los datos.
 
-Antes de iniciar el cómputo en M8:
+Antes de la próxima sesión de cómputo:
 
 1. Crear una IP pública Standard y un NAT Gateway Standard.
 2. Asociar la IP pública al NAT Gateway.
 3. Asociar el NAT Gateway a ambas subredes de Databricks.
 
 La nueva IP pública puede diferir de la utilizada en esta sesión.
+
+## Sesión CDC de M8
+
+El 26 de octubre de 2026 se restablecieron temporalmente el NAT Gateway
+y su IP pública, asociados a ambas subredes de Databricks.
+
+El notebook 05_products_cdc_to_silver.ipynb se ejecutó desde
+notebooks/silver/ y sus importaciones funcionaron correctamente.
+Esto no sustituye la comprobación individual de los cuatro notebooks
+de carga inicial reubicados en M7.
+
+La tabla silver_techretail.products terminó con 61 productos.
+El control CDC se conservó en Silver bajo _control/products_cdc_application.
+
+Después de verificar los resultados se detuvo el clúster
+y se eliminaron nuevamente el NAT Gateway y su IP pública.

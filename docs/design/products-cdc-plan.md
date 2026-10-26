@@ -80,8 +80,9 @@ Diseño inicial definido.
 Captura real de inserciones, actualización y eliminación verificada.
 Extracción por LSN, continuidad y aplicación local a Delta verificadas.
 Reprocesamiento, control de orden y recuperación simulada verificados localmente.
-Ejecución en Azure pendiente.
-Databricks permanece detenido durante la preparación local.
+Aplicación en Azure verificada el 26 de octubre de 2026.
+Clúster detenido; NAT Gateway e IP pública eliminados.
+Documentación final e integración en main pendientes.
 
 ## Habilitación verificada — M8.1
 
@@ -209,3 +210,55 @@ Límites de la implementación:
 - El checkpoint presupone que el destino no se modifica por otros procesos.
 
 La ejecución en Azure permanece pendiente.
+
+## Ejecución en Azure verificada — M8.6
+
+El 26 de octubre de 2026 se ejecutó el notebook
+notebooks/silver/05_products_cdc_to_silver.ipynb
+desde cómputo clásico con Databricks Runtime 16.4 LTS.
+
+Publicación de Bronze:
+9625ead0-e913-5b83-873e-27b1ccda74de.
+
+Entradas conservadas y verificadas tras su publicación:
+
+- baseline.json: 60 productos.
+- batch_001.json: cuatro eventos.
+- batch_002.json: cero eventos.
+
+Antes de aplicar los cambios se compararon los 60 productos de Azure
+con la base CDC. La comparación fue satisfactoria.
+
+Destino:
+abfss://silver@starlpdevdiego01.dfs.core.windows.net/techretail/products
+
+Control de aplicación persistido en Delta:
+abfss://silver@starlpdevdiego01.dfs.core.windows.net/_control/products_cdc_application
+
+Resultados:
+
+- Primer lote aplicado y estado final verificado: 61 productos.
+- Producto 61 presente con precio 2600.00 y procedencia del primer lote.
+- Producto 62 ausente en el destino.
+- Repetición exacta del primer lote reconocida sin nuevas escrituras.
+- Segundo lote vacío procesado sin avanzar el LSN.
+- Consulta por Unity Catalog coincidente con el destino Delta.
+
+Último LSN aplicado:
+0x0000003300004cb80003.
+
+El producto 62 no existía en la base Silver de Azure.
+Su evento de eliminación no requirió borrar una fila en ese destino.
+La inserción, actualización y eliminación reales se comprobaron
+en SQL Server; Azure verificó la aplicación del estado final del lote.
+
+La recuperación simulada se probó localmente.
+No se realizó una prueba de caída del proceso en Azure.
+
+El clúster se detuvo al finalizar.
+Se desvincularon las dos subredes y se eliminaron el NAT Gateway
+y su IP pública, conservando la VNet, las subredes, el NSG,
+el workspace, la identidad, los datos y el control de aplicación.
+
+El gasto definitivo de la sesión queda pendiente de revisión
+cuando Azure Cost Management refleje sus consumos.
