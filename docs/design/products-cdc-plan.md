@@ -82,7 +82,8 @@ Extracción por LSN, continuidad y aplicación local a Delta verificadas.
 Reprocesamiento, control de orden y recuperación simulada verificados localmente.
 Aplicación en Azure verificada el 26 de octubre de 2026.
 Clúster detenido; NAT Gateway e IP pública eliminados.
-Documentación final e integración en main pendientes.
+M8 completado e integrado en main mediante el PR #15,
+commit 212e996.
 
 ## Habilitación verificada — M8.1
 

@@ -135,6 +135,8 @@ Azure Cost Management refleje los consumos de la sesión.
 ## Estado
 
 Implementación y ejecución local y Azure verificadas.
-Revisión final e integración en main pendientes.
+M8 completado e integrado en main mediante el
+[PR #15](https://github.com/DiegoSuarz/azure-retail-lakehouse-platform/pull/15),
+commit 212e996.
 
 El siguiente módulo previsto es M9: modelo estrella y capa Gold.
