@@ -77,3 +77,78 @@ def build_date_dimension(spark, start_year, end_year):
         ))
 
     return spark.createDataFrame(records, schema=schema)
+
+
+def build_product_dimension(products, categories):
+    """Construye la dimensión inicial de productos con su categoría."""
+    from pyspark.sql import functions as F
+    from pyspark.sql.window import Window
+
+    for frame, key in (
+        (products, "product_id"),
+        (categories, "category_id"),
+    ):
+        if frame.filter(
+            F.col(key).isNull() | (F.col(key) <= 0)
+        ).limit(1).count():
+            raise ValueError(f"Clave nula o no positiva: {key}")
+
+        if (
+            frame.groupBy(key)
+            .count()
+            .filter(F.col("count") > 1)
+            .limit(1)
+            .count()
+        ):
+            raise ValueError(f"Clave duplicada: {key}")
+
+    if products.filter(
+        F.col("category_id").isNull()
+    ).limit(1).count():
+        raise ValueError("Existe un producto sin category_id.")
+
+    missing = products.join(
+        categories.select("category_id"),
+        on="category_id",
+        how="left_anti",
+    )
+    if missing.limit(1).count():
+        raise ValueError("Existen productos sin categoría válida.")
+
+    joined = (
+        products.select(
+            "product_id",
+            "category_id",
+            "sku",
+            "product_name",
+            "brand",
+            "list_price",
+            "is_active",
+        )
+        .join(
+            categories.select("category_id", "category_name"),
+            on="category_id",
+            how="inner",
+        )
+    )
+
+    return (
+        joined
+        .withColumn(
+            "product_key",
+            F.row_number()
+            .over(Window.orderBy("product_id"))
+            .cast("long"),
+        )
+        .select(
+            "product_key",
+            "product_id",
+            "sku",
+            "product_name",
+            "brand",
+            "category_id",
+            "category_name",
+            "list_price",
+            "is_active",
+        )
+    )
