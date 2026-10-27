@@ -379,3 +379,130 @@ para identificar el estado de Silver utilizado en la construcción.
 Las tablas Gold se crearán sin sobrescribir destinos existentes.
 La escritura entre tablas no constituye una transacción conjunta.
 Una carga parcial no se declarará completada.
+
+## Medidas y controles — M9.2
+
+### Importes en PEN
+
+- unit_price_pen: decimal(18,2).
+- gross_amount_pen: decimal(28,2).
+- discount_amount_pen: decimal(28,2).
+- net_amount_pen: decimal(28,2).
+
+Fórmulas por línea:
+
+- gross_amount_pen = quantity * unit_price_pen.
+- discount_amount_pen = descuento total de la línea del origen.
+- net_amount_pen = gross_amount_pen - discount_amount_pen.
+
+Los cálculos usarán decimales, sin conversiones intermedias a float.
+Se rechazará cualquier importe fuera de la precisión definida.
+El descuento no se multiplicará nuevamente por quantity.
+
+### Selección de tasas
+
+Serie: PD04638PD.
+Unidad: PEN por USD.
+Fecha de referencia: fecha del pedido en America/Lima.
+
+Para cada fecha comercial se seleccionará la última observación
+disponible y positiva cuya fecha sea menor o igual a la fecha comercial,
+con antigüedad máxima de siete días calendario.
+
+El límite de siete días es una política del proyecto.
+No se aplicará relleno con tasas futuras.
+No se prolongará indefinidamente la última tasa disponible.
+
+Se conservarán exchange_rate_series_code, exchange_rate_date
+y rate_pen_per_usd para las conversiones disponibles.
+Cuando no exista tasa aplicable, estos campos y los importes USD
+quedarán nulos, con conversion_available = false.
+
+La selección se realizará sobre observaciones únicas por serie y fecha.
+La unión con ventas no podrá perder ni multiplicar líneas.
+
+La conversión es una referencia histórica ilustrativa:
+no representa necesariamente una cotización conocida al instante
+del pedido ni el tipo de cambio realmente cobrado.
+
+### Importes en USD
+
+- gross_amount_usd: decimal(28,2).
+- discount_amount_usd: decimal(28,2).
+- net_amount_usd: decimal(28,2).
+
+Reglas por línea:
+
+- gross_amount_usd = redondear(gross_amount_pen / tasa, 2).
+- discount_amount_usd = redondear(discount_amount_pen / tasa, 2).
+- net_amount_usd = gross_amount_usd - discount_amount_usd.
+
+El redondeo será HALF_UP.
+La división conservará precisión decimal antes del redondeo final;
+su implementación se comprobará con casos límite.
+
+El neto USD se obtiene por diferencia para conservar la identidad
+bruto menos descuento igual a neto en los importes publicados.
+Puede diferir en un centavo de convertir y redondear el neto PEN
+de manera independiente.
+
+Los totales USD sumarán los importes de línea publicados.
+No se convertirán todos los pedidos usando una única tasa.
+
+### Indicadores
+
+Las ventas incluirán únicamente pedidos confirmed.
+
+- Ventas netas PEN: suma de net_amount_pen.
+- Unidades vendidas: suma de quantity.
+- Pedidos confirmados: cantidad distinta de order_id.
+- Ticket promedio PEN: ventas netas PEN / pedidos confirmados.
+
+Si no existen pedidos confirmados, el ticket promedio será nulo.
+
+Los indicadores USD incluirán solo líneas con conversión disponible.
+Se mostrarán la cantidad de líneas sin conversión y el importe PEN
+correspondiente, usando el mismo filtro comercial.
+
+Si ninguna línea tiene conversión, el total USD será nulo.
+Un total parcialmente convertido no se presentará como cobertura completa.
+
+### Controles de la carga inicial
+
+| Control | Referencia |
+|---|---:|
+| Líneas de pedido | 5862 |
+| Pedidos distintos | 2000 |
+| Pedidos pending | 209 |
+| Pedidos confirmed | 1578 |
+| Pedidos cancelled | 213 |
+| Cantidad total de unidades | 14792 |
+| Unidades confirmadas | 11682 |
+| Importe bruto total PEN | 21645086.45 |
+| Descuento total PEN | 1667089.99 |
+| Importe neto total PEN | 19977996.46 |
+| Importe neto confirmado PEN | 15781257.30 |
+
+Los conteos por estado corresponden a pedidos distintos, no a líneas.
+Los importes totales incluyen todos los estados.
+
+Estas referencias pertenecen a la carga inicial aceptada.
+Además se calcularán los controles desde las versiones Silver
+utilizadas y se compararán con Gold.
+
+Si las entradas cambian legítimamente, las referencias iniciales
+no se reutilizarán como constantes universales.
+
+### Casos de prueba requeridos
+
+- Varias líneas del mismo pedido, sin duplicar el conteo de pedidos.
+- Venta cuyo día en Lima sea anterior al día UTC.
+- Tasa disponible en la misma fecha.
+- Uso de tasa anterior dentro de siete días, incluyendo el límite.
+- Tasa anterior de ocho días, rechazada para conversión.
+- Observación no disponible y búsqueda de una tasa anterior válida.
+- Ausencia de tasa anterior y presencia exclusiva de tasas futuras.
+- Fechas fuera de la cobertura disponible.
+- Redondeo HALF_UP y coherencia entre bruto, descuento y neto USD.
+- Conservación de todas las líneas aunque falte conversión.
+- Claves duplicadas o referencias faltantes, que impedirán aceptar la carga.
