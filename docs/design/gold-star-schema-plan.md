@@ -155,3 +155,227 @@ No se implementará historial SCD ni actualización incremental de Gold en M9.
 
 M9.0: alcance inicial documentado.
 Diseño detallado e implementación pendientes.
+
+## Diseño dimensional — M9.1
+
+### dim_product
+
+Grano inicial: un producto de Silver.
+Clave surrogate: product_key, bigint.
+Clave del origen: product_id, int.
+
+Atributos:
+
+- sku
+- product_name
+- brand
+- category_id
+- category_name
+- list_price, decimal(18,2), precio vigente en PEN
+- is_active
+
+Se incluirán todos los productos válidos, aunque no tengan ventas.
+La categoría se incorpora mediante una relación muchos a uno.
+La dimensión inicial describe el estado disponible en Silver,
+sin reconstruir versiones históricas anteriores.
+
+### dim_customer
+
+Grano inicial: un cliente de Silver.
+Clave surrogate: customer_key, bigint.
+Clave del origen: customer_id, int.
+
+Atributos:
+
+- first_name
+- last_name
+- city
+- region
+- is_active
+
+El correo no se publicará en Gold porque no es necesario
+para las preguntas de negocio definidas.
+
+### Asignación de claves de producto y cliente
+
+Las claves surrogate serán independientes de las claves del origen.
+
+En la primera carga se asignarán enteros consecutivos según
+el identificador de origen, con orden determinista y sin duplicados.
+
+La correspondencia entre clave surrogate y clave de origen
+quedará persistida en las dimensiones Delta.
+No se regenerarán claves sobre dimensiones existentes.
+
+Las futuras cargas deberán reutilizar las claves asignadas
+y reservar nuevas claves para registros o versiones nuevos.
+La actualización y el historial corresponden a módulos posteriores.
+
+No se utilizará monotonically_increasing_id para asignar estas claves.
+
+### dim_date
+
+Grano: un día calendario.
+Clave: date_key, int, con formato YYYYMMDD.
+Atributo único: full_date, date.
+
+Atributos adicionales:
+
+- year
+- quarter
+- month_number
+- month_name
+- day_of_month
+- day_of_week, de lunes 1 a domingo 7
+- day_name
+- is_weekend
+
+Los nombres de meses y días se definirán explícitamente en español.
+El calendario cubrirá años completos que contengan las fechas
+de negocio de los pedidos aceptados.
+
+La fecha del pedido se obtendrá convirtiendo order_date
+desde UTC a America/Lima antes de extraer el día.
+
+### dim_order_status
+
+Grano: un estado de pedido.
+Clave: order_status_key, int.
+
+Correspondencia fija:
+
+| order_status_key | status | status_name | counts_as_sale |
+|---|---|---|---|
+| 1 | pending | Pendiente | false |
+| 2 | confirmed | Confirmado | true |
+| 3 | cancelled | Cancelado | false |
+
+Los estados desconocidos impedirán aceptar la carga.
+
+### fact_sales
+
+Grano: una línea de pedido.
+Clave de negocio única: order_id más line_number.
+
+Referencias dimensionales:
+
+- product_key
+- customer_key
+- date_key
+- order_status_key
+
+Identificadores conservados:
+
+- order_id
+- line_number
+
+Campos comerciales:
+
+- order_date_utc, timestamp
+- currency_code, igual a PEN
+- quantity, int
+- unit_price_pen, decimal(18,2)
+- gross_amount_pen
+- discount_amount_pen
+- net_amount_pen
+
+Las precisiones de importes derivados se definirán en M9.2.
+
+No se sumarán unit_price_pen ni claves como medidas.
+Los pedidos se contarán mediante order_id distinto.
+Las ventas se filtrarán por counts_as_sale = true.
+
+Campos adicionales para conversión:
+
+- exchange_rate_series_code
+- exchange_rate_date
+- rate_pen_per_usd, decimal(20,14)
+- conversion_available, boolean
+- gross_amount_usd
+- discount_amount_usd
+- net_amount_usd
+
+La selección de tasa, precisión y redondeo se definirán en M9.2.
+Cuando la conversión no esté disponible, sus importes serán nulos.
+La incorporación de tasas conservará todas las líneas y su unicidad.
+
+### Integridad dimensional
+
+Las referencias obligatorias sin dimensión impedirán aceptar la carga.
+M9 no sustituirá silenciosamente claves faltantes por valores ficticios.
+
+Se comprobará la unicidad de las claves de origen y surrogate,
+y la ausencia de referencias huérfanas.
+Los productos o clientes inactivos no se eliminarán por ese motivo.
+
+### ref_exchange_rates
+
+Grano: una observación por series_code y observation_date.
+Clave compuesta: series_code más observation_date.
+
+Campos:
+
+- series_code
+- observation_date
+- rate_pen_per_usd, decimal(20,14)
+- available
+- raw_value
+
+Se conservarán las observaciones disponibles y no disponibles.
+La tabla no inventará filas para días ausentes en la fuente.
+La selección de una tasa para cada venta será una regla explícita
+de transformación, no una modificación del dato original.
+
+### product_catalog_mapping
+
+Grano: una asociación educativa por source_system
+y external_product_id.
+
+Partirá del mapeo validado y utilizará uniones con referencias
+obligatorias a productos locales y externos.
+Las referencias faltantes impedirán aceptar el dataset.
+
+Campos locales:
+
+- product_key
+- product_id
+- local_sku
+- local_product_name
+- local_brand
+- local_category_name
+- local_list_price_pen
+
+Campos externos:
+
+- source_system
+- external_product_id
+- external_product_name
+- external_category
+- external_brand
+- external_sku
+- external_price
+- external_currency_code
+- external_rating
+- external_stock
+
+Campos del mapeo:
+
+- mapping_type
+- mapping_note
+
+La versión actual contiene seis asociaciones educativas.
+No se exigirá que todos los productos locales o externos estén asociados.
+Las claves de ambos catálogos no se equipararán por igualdad numérica.
+
+Este dataset permanecerá separado de fact_sales.
+Los precios no se restarán ni dividirán entre fuentes.
+
+### Procedencia y reproducibilidad
+
+Las salidas incorporarán gold_processing_run_id y gold_processed_at.
+La ejecución registrará las rutas y versiones Delta de las entradas,
+para identificar el estado de Silver utilizado en la construcción.
+
+Las tablas Gold se crearán sin sobrescribir destinos existentes.
+La escritura entre tablas no constituye una transacción conjunta.
+Una carga parcial no se declarará completada.
