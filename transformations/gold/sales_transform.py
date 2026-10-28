@@ -98,3 +98,66 @@ def attach_order_context(amounts, orders):
     )
 
     return amounts.join(context, on="order_id", how="inner")
+
+
+def resolve_sales_dimension_keys(
+    sales,
+    dim_product,
+    dim_customer,
+    dim_date,
+    dim_order_status,
+):
+    """Resuelve las cuatro claves dimensionales de cada línea de pedido."""
+    lookups = (
+        ("producto", dim_product, "product_id", "product_id", "product_key"),
+        ("cliente", dim_customer, "customer_id", "customer_id", "customer_key"),
+        ("fecha", dim_date, "business_date", "full_date", "date_key"),
+        ("estado", dim_order_status, "status", "status", "order_status_key"),
+    )
+
+    result = sales
+
+    for label, dimension, sales_column, dimension_column, key in lookups:
+        if key in result.columns:
+            raise ValueError(f"La venta ya contiene la clave: {key}")
+
+        lookup = dimension.select(
+            F.col(dimension_column).alias(sales_column),
+            key,
+        )
+
+        invalid = (
+            F.col(sales_column).isNull()
+            | F.col(key).isNull()
+            | (F.col(key) <= 0)
+        )
+        if lookup.filter(invalid).limit(1).count():
+            raise ValueError(f"Referencia dimensional inválida: {label}")
+
+        for column in (sales_column, key):
+            if (
+                lookup.groupBy(column)
+                .count()
+                .filter(F.col("count") > 1)
+                .limit(1)
+                .count()
+            ):
+                raise ValueError(
+                    f"Referencia dimensional duplicada: {label}, {column}"
+                )
+
+        missing = result.join(
+            lookup.select(sales_column),
+            on=sales_column,
+            how="left_anti",
+        )
+        if missing.limit(1).count():
+            raise ValueError(f"Existen ventas sin dimensión de {label}.")
+
+        result = result.join(
+            lookup,
+            on=sales_column,
+            how="inner",
+        )
+
+    return result
