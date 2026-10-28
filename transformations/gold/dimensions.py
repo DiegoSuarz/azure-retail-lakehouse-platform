@@ -191,3 +191,29 @@ def build_customer_dimension(customers):
             "is_active",
         )
     )
+
+
+def add_order_business_date(orders):
+    """Añade el día comercial en Lima a pedidos con order_date en UTC."""
+    from pyspark.sql import functions as F
+
+    if orders.sparkSession.conf.get("spark.sql.session.timeZone") != "UTC":
+        raise ValueError("La sesión Spark debe utilizar UTC.")
+
+    if not isinstance(orders.schema["order_date"].dataType, T.TimestampType):
+        raise ValueError("order_date debe ser de tipo timestamp.")
+
+    if orders.filter(
+        F.col("order_date").isNull()
+    ).limit(1).count():
+        raise ValueError("Existe un pedido sin order_date.")
+
+    return orders.withColumn(
+        "business_date",
+        F.to_date(
+            F.from_utc_timestamp(
+                F.col("order_date"),
+                "America/Lima",
+            )
+        ),
+    )
