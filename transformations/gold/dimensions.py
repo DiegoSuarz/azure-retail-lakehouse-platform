@@ -152,3 +152,42 @@ def build_product_dimension(products, categories):
             "is_active",
         )
     )
+
+
+def build_customer_dimension(customers):
+    """Construye la dimensión inicial de clientes."""
+    from pyspark.sql import functions as F
+    from pyspark.sql.window import Window
+
+    if customers.filter(
+        F.col("customer_id").isNull() | (F.col("customer_id") <= 0)
+    ).limit(1).count():
+        raise ValueError("Clave nula o no positiva: customer_id")
+
+    if (
+        customers.groupBy("customer_id")
+        .count()
+        .filter(F.col("count") > 1)
+        .limit(1)
+        .count()
+    ):
+        raise ValueError("Clave duplicada: customer_id")
+
+    return (
+        customers
+        .withColumn(
+            "customer_key",
+            F.row_number()
+            .over(Window.orderBy("customer_id"))
+            .cast("long"),
+        )
+        .select(
+            "customer_key",
+            "customer_id",
+            "first_name",
+            "last_name",
+            "city",
+            "region",
+            "is_active",
+        )
+    )
