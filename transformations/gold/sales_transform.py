@@ -161,3 +161,113 @@ def resolve_sales_dimension_keys(
         )
 
     return result
+
+
+def attach_sales_exchange_rate(sales, exchange_rates):
+    """Añade la última tasa disponible con antigüedad máxima de siete días."""
+    from pyspark.sql import types as T
+    from pyspark.sql.window import Window
+
+    output_columns = (
+        "exchange_rate_series_code",
+        "exchange_rate_date",
+        "rate_pen_per_usd",
+        "conversion_available",
+    )
+    if any(column in sales.columns for column in output_columns):
+        raise ValueError("Las ventas ya contienen columnas cambiarias.")
+
+    if not isinstance(sales.schema["business_date"].dataType, T.DateType):
+        raise ValueError("business_date debe ser de tipo date.")
+
+    if sales.filter(
+        F.col("business_date").isNull()
+    ).limit(1).count():
+        raise ValueError("Existe una venta sin fecha comercial.")
+
+    expected_types = (
+        ("series_code", T.StringType()),
+        ("observation_date", T.DateType()),
+        ("rate_pen_per_usd", T.DecimalType(20, 14)),
+        ("available", T.BooleanType()),
+    )
+    for column, expected_type in expected_types:
+        if exchange_rates.schema[column].dataType != expected_type:
+            raise ValueError(f"Tipo incompatible en tasas: {column}")
+
+    rates = exchange_rates.select(
+        "series_code",
+        "observation_date",
+        "rate_pen_per_usd",
+        "available",
+    )
+
+    valid_rate = (
+        (
+            F.col("available")
+            & F.col("rate_pen_per_usd").isNotNull()
+            & (F.col("rate_pen_per_usd") > 0)
+        )
+        | (
+            ~F.col("available")
+            & F.col("rate_pen_per_usd").isNull()
+        )
+    )
+    valid = (
+        (F.col("series_code") == "PD04638PD")
+        & F.col("observation_date").isNotNull()
+        & F.col("available").isNotNull()
+        & valid_rate
+    )
+    if rates.filter(
+        ~F.coalesce(valid, F.lit(False))
+    ).limit(1).count():
+        raise ValueError("Observaciones cambiarias incompatibles.")
+
+    if (
+        rates.groupBy("series_code", "observation_date")
+        .count()
+        .filter(F.col("count") > 1)
+        .limit(1)
+        .count()
+    ):
+        raise ValueError("Observación cambiaria duplicada por serie y fecha.")
+
+    business_dates = sales.select("business_date").distinct()
+    available_rates = rates.filter(F.col("available"))
+
+    candidates = business_dates.join(
+        available_rates,
+        on=(
+            (F.col("observation_date") <= F.col("business_date"))
+            & (
+                F.datediff(
+                    F.col("business_date"),
+                    F.col("observation_date"),
+                ) <= 7
+            )
+        ),
+        how="left",
+    )
+
+    latest_first = (
+        Window.partitionBy("business_date")
+        .orderBy(F.col("observation_date").desc_nulls_last())
+    )
+
+    selected = (
+        candidates
+        .withColumn("_rate_rank", F.row_number().over(latest_first))
+        .filter(F.col("_rate_rank") == 1)
+        .select(
+            "business_date",
+            F.col("series_code").alias("exchange_rate_series_code"),
+            F.col("observation_date").alias("exchange_rate_date"),
+            "rate_pen_per_usd",
+            F.col("rate_pen_per_usd")
+            .isNotNull()
+            .alias("conversion_available"),
+        )
+    )
+
+    return sales.join(selected, on="business_date", how="left")
