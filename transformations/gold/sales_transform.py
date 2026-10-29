@@ -271,3 +271,105 @@ def attach_sales_exchange_rate(sales, exchange_rates):
     )
 
     return sales.join(selected, on="business_date", how="left")
+
+
+def calculate_sales_usd(sales):
+    """Calcula importes USD con HALF_UP y neto por diferencia."""
+    from decimal import Decimal, ROUND_HALF_UP, localcontext
+
+    from pyspark.sql import types as T
+
+    output_columns = (
+        "gross_amount_usd",
+        "discount_amount_usd",
+        "net_amount_usd",
+    )
+    if any(column in sales.columns for column in output_columns):
+        raise ValueError("Las ventas ya contienen importes USD.")
+
+    expected_types = (
+        ("gross_amount_pen", T.DecimalType(28, 2)),
+        ("discount_amount_pen", T.DecimalType(28, 2)),
+        ("net_amount_pen", T.DecimalType(28, 2)),
+        ("rate_pen_per_usd", T.DecimalType(20, 14)),
+        ("conversion_available", T.BooleanType()),
+    )
+    for column, expected_type in expected_types:
+        if sales.schema[column].dataType != expected_type:
+            raise ValueError(f"Tipo incompatible para conversión: {column}")
+
+    valid_amounts = (
+        (F.col("gross_amount_pen") >= 0)
+        & (F.col("discount_amount_pen") >= 0)
+        & (F.col("net_amount_pen") >= 0)
+        & (
+            F.col("net_amount_pen")
+            == F.col("gross_amount_pen") - F.col("discount_amount_pen")
+        )
+    )
+    valid_conversion = (
+        (
+            F.col("conversion_available")
+            & F.col("rate_pen_per_usd").isNotNull()
+            & (F.col("rate_pen_per_usd") > 0)
+        )
+        | (
+            ~F.col("conversion_available")
+            & F.col("rate_pen_per_usd").isNull()
+        )
+    )
+    valid = (
+        valid_amounts
+        & F.col("conversion_available").isNotNull()
+        & valid_conversion
+    )
+    if sales.filter(
+        ~F.coalesce(valid, F.lit(False))
+    ).limit(1).count():
+        raise ValueError("Importes PEN o disponibilidad cambiaria incompatibles.")
+
+    usd_schema = T.StructType([
+        T.StructField(column, T.DecimalType(28, 2), nullable=True)
+        for column in output_columns
+    ])
+
+    def convert_amounts(gross, discount, rate, available):
+        if not available:
+            return None, None, None
+
+        with localcontext() as context:
+            context.prec = 80
+            cent = Decimal("0.01")
+            gross_usd = (gross / rate).quantize(
+                cent, rounding=ROUND_HALF_UP
+            )
+            discount_usd = (discount / rate).quantize(
+                cent, rounding=ROUND_HALF_UP
+            )
+            net_usd = gross_usd - discount_usd
+
+            amounts = (gross_usd, discount_usd, net_usd)
+            if any(abs(value) >= Decimal("1e26") for value in amounts):
+                raise ValueError("Importe USD fuera de decimal(28,2).")
+
+            return amounts
+
+    convert = F.udf(convert_amounts, usd_schema)
+
+    converted = sales.withColumn(
+        "_usd_amounts",
+        convert(
+            F.col("gross_amount_pen"),
+            F.col("discount_amount_pen"),
+            F.col("rate_pen_per_usd"),
+            F.col("conversion_available"),
+        ),
+    )
+
+    return converted.select(
+        *[F.col(column) for column in sales.columns],
+        *[
+            F.col(f"_usd_amounts.{column}").alias(column)
+            for column in output_columns
+        ],
+    )
