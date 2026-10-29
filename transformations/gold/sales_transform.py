@@ -373,3 +373,81 @@ def calculate_sales_usd(sales):
             for column in output_columns
         ],
     )
+
+
+def build_sales_fact(
+    order_items,
+    orders,
+    dim_product,
+    dim_customer,
+    dim_date,
+    dim_order_status,
+    exchange_rates,
+    gold_processing_run_id,
+    gold_processed_at,
+):
+    """Construye los hechos de ventas con claves, importes y procedencia."""
+    from datetime import datetime, timezone
+
+    if (
+        not isinstance(gold_processing_run_id, str)
+        or not gold_processing_run_id.strip()
+    ):
+        raise ValueError("Se requiere gold_processing_run_id no vacío.")
+
+    if (
+        not isinstance(gold_processed_at, datetime)
+        or gold_processed_at.tzinfo is None
+        or gold_processed_at.utcoffset() is None
+    ):
+        raise ValueError("gold_processed_at debe incluir zona horaria.")
+
+    processed_at_utc = gold_processed_at.astimezone(timezone.utc)
+
+    amounts = prepare_sales_amounts(order_items)
+    contextualized = attach_order_context(amounts, orders)
+
+    dimensional = resolve_sales_dimension_keys(
+        contextualized,
+        dim_product,
+        dim_customer,
+        dim_date,
+        dim_order_status,
+    )
+
+    rated = attach_sales_exchange_rate(dimensional, exchange_rates)
+    converted = calculate_sales_usd(rated)
+
+    return (
+        converted
+        .select(
+            "order_id",
+            "line_number",
+            "product_key",
+            "customer_key",
+            "date_key",
+            "order_status_key",
+            "order_date_utc",
+            "currency_code",
+            "quantity",
+            "unit_price_pen",
+            "gross_amount_pen",
+            "discount_amount_pen",
+            "net_amount_pen",
+            "exchange_rate_series_code",
+            "exchange_rate_date",
+            "rate_pen_per_usd",
+            "conversion_available",
+            "gross_amount_usd",
+            "discount_amount_usd",
+            "net_amount_usd",
+        )
+        .withColumn(
+            "gold_processing_run_id",
+            F.lit(gold_processing_run_id),
+        )
+        .withColumn(
+            "gold_processed_at",
+            F.lit(processed_at_utc),
+        )
+    )
