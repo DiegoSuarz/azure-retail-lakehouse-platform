@@ -498,3 +498,104 @@ def validate_sales_exchange_rates(inputs, tables):
         "invalid_rate_rows": invalid_count,
         "business_dates_checked": len(expected_records),
     }
+
+
+def validate_sales_usd(tables):
+    """Contrasta los importes USD con redondeo exacto independiente."""
+    from decimal import Decimal, localcontext
+    from fractions import Fraction
+
+    from pyspark.sql import types as T
+
+    fact = tables["fact_sales"]
+    usd_columns = (
+        "gross_amount_usd",
+        "discount_amount_usd",
+        "net_amount_usd",
+    )
+    expected_types = (
+        ("gross_amount_pen", T.DecimalType(28, 2)),
+        ("discount_amount_pen", T.DecimalType(28, 2)),
+        ("rate_pen_per_usd", T.DecimalType(20, 14)),
+        ("conversion_available", T.BooleanType()),
+        *[(column, T.DecimalType(28, 2)) for column in usd_columns],
+    )
+    for column, expected_type in expected_types:
+        if fact.schema[column].dataType != expected_type:
+            raise ValueError(f"Tipo incompatible en validación USD: {column}")
+
+    def rounded_cents(amount, rate):
+        cents = Fraction(amount) * 100 / Fraction(rate)
+        integer, remainder = divmod(cents.numerator, cents.denominator)
+        return integer + int(2 * remainder >= cents.denominator)
+
+    checked = 0
+    converted = 0
+    unavailable = 0
+    invalid = 0
+
+    columns = (
+        "gross_amount_pen",
+        "discount_amount_pen",
+        "rate_pen_per_usd",
+        "conversion_available",
+        *usd_columns,
+    )
+
+    with localcontext() as context:
+        context.prec = 80
+
+        for row in fact.select(*columns).toLocalIterator():
+            checked += 1
+            actual = tuple(row[column] for column in usd_columns)
+            available = row["conversion_available"]
+            rate = row["rate_pen_per_usd"]
+
+            if available is False:
+                unavailable += 1
+                if rate is not None or any(value is not None for value in actual):
+                    invalid += 1
+                continue
+
+            if available is not True or rate is None or rate <= 0:
+                invalid += 1
+                continue
+
+            gross = row["gross_amount_pen"]
+            discount = row["discount_amount_pen"]
+            if (
+                gross is None
+                or discount is None
+                or gross < 0
+                or discount < 0
+                or discount > gross
+            ):
+                invalid += 1
+                continue
+
+            converted += 1
+            gross_usd = Decimal(rounded_cents(gross, rate)).scaleb(-2)
+            discount_usd = Decimal(rounded_cents(discount, rate)).scaleb(-2)
+            expected = (
+                gross_usd,
+                discount_usd,
+                gross_usd - discount_usd,
+            )
+
+            if (
+                any(abs(value) >= Decimal("1e26") for value in expected)
+                or actual != expected
+            ):
+                invalid += 1
+
+    result = {
+        "checked_rows": checked,
+        "converted_rows": converted,
+        "unavailable_rows": unavailable,
+        "invalid_usd_rows": invalid,
+        "passed": invalid == 0,
+    }
+    if not result["passed"]:
+        raise ValueError(f"Importes USD persistidos incompatibles: {result}")
+
+    return result
