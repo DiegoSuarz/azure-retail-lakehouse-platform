@@ -278,3 +278,112 @@ def validate_gold_provenance(tables, report):
             raise ValueError(f"Procedencia Gold incompatible: {check}")
 
     return {"passed": True, "checks": checks}
+
+
+def reconcile_sales_lines(inputs, tables):
+    """Compara cada línea Gold con su contexto e importes originales Silver."""
+    from pyspark.sql import functions as F
+
+    spark = tables["fact_sales"].sparkSession
+    if spark.conf.get("spark.sql.session.timeZone") != "UTC":
+        raise ValueError("La reconciliación requiere una sesión UTC.")
+
+    # Calculamos la referencia directamente desde Silver.
+    expected = (
+        inputs["order_items"]
+        .select(
+            "order_id",
+            "line_number",
+            "product_id",
+            "quantity",
+            F.col("unit_price").alias("unit_price_pen"),
+            F.col("discount_amount")
+            .cast("decimal(28,2)")
+            .alias("discount_amount_pen"),
+        )
+        .join(
+            inputs["orders"].select(
+                "order_id",
+                "customer_id",
+                F.col("order_date").alias("order_date_utc"),
+                "currency_code",
+                "status",
+            ),
+            on="order_id",
+            how="inner",
+        )
+        .withColumn(
+            "business_date",
+            F.to_date(
+                F.from_utc_timestamp("order_date_utc", "America/Lima")
+            ),
+        )
+        .withColumn(
+            "gross_amount_pen",
+            (F.col("quantity") * F.col("unit_price_pen"))
+            .cast("decimal(28,2)"),
+        )
+        .withColumn(
+            "net_amount_pen",
+            (F.col("gross_amount_pen") - F.col("discount_amount_pen"))
+            .cast("decimal(28,2)"),
+        )
+    )
+
+    # Recuperamos el contexto usando las relaciones persistidas en Gold.
+    actual = (
+        tables["fact_sales"]
+        .join(
+            tables["dim_product"].select("product_key", "product_id"),
+            on="product_key",
+            how="left",
+        )
+        .join(
+            tables["dim_customer"].select("customer_key", "customer_id"),
+            on="customer_key",
+            how="left",
+        )
+        .join(
+            tables["dim_date"].select(
+                "date_key",
+                F.col("full_date").alias("business_date"),
+            ),
+            on="date_key",
+            how="left",
+        )
+        .join(
+            tables["dim_order_status"].select("order_status_key", "status"),
+            on="order_status_key",
+            how="left",
+        )
+        .select(*expected.columns)
+    )
+
+    source_count = inputs["order_items"].count()
+    expected_count = expected.count()
+    actual_count = actual.count()
+
+    if expected_count != source_count:
+        raise ValueError(
+            "La unión de referencia Silver perdió o multiplicó líneas."
+        )
+
+    missing_or_different = expected.exceptAll(actual).count()
+    extra_or_different = actual.exceptAll(expected).count()
+
+    result = {
+        "source_line_count": source_count,
+        "gold_line_count": actual_count,
+        "missing_or_different_rows": missing_or_different,
+        "extra_or_different_rows": extra_or_different,
+        "passed": (
+            actual_count == source_count
+            and missing_or_different == 0
+            and extra_or_different == 0
+        ),
+    }
+
+    if not result["passed"]:
+        raise ValueError(f"Reconciliación de líneas incompatible: {result}")
+
+    return result
