@@ -85,6 +85,37 @@ Este documento registra la evidencia; no contiene los archivos Delta.
 
 ## Pendientes
 
-- Verificar consultas analíticas sobre las tablas persistidas.
 - Preparar y ejecutar la construcción en Azure.
 - Documentar el cierre general de M9 al completar su alcance.
+
+## Consultas SQL verificadas
+
+Consultas Spark SQL en serving/spark_sql/:
+
+- confirmed_sales_summary.sql: resumen confirmado, ticket promedio y cobertura USD.
+- confirmed_sales_by_month_category.sql: ventas por mes comercial y categoría.
+- orders_by_status.sql: distribución operativa por estado.
+
+Resultados del resumen confirmado:
+
+| Indicador | Resultado |
+|---|---:|
+| Líneas | 4607 |
+| Pedidos distintos | 1578 |
+| Unidades | 11682 |
+| Neto PEN | 15781257.30 |
+| Ticket promedio PEN | 10000.80 |
+| Líneas con conversión | 4538 |
+| Líneas sin conversión | 69 |
+| Neto PEN sin conversión | 218881.86 |
+| Neto USD convertido | 4572378.30 |
+
+El total USD tiene cobertura parcial y no representa todas las ventas.
+
+La agrupación por mes y categoría conserva líneas, unidades e importes.
+Los pedidos distintos por categoría no se suman como total general.
+
+La distribución por estado devuelve 209 pedidos pending, 1578 confirmed
+y 213 cancelled. Un estado sin pedidos permanece con conteos cero.
+
+Las consultas utilizan vistas temporales y no modifican las tablas Delta.
