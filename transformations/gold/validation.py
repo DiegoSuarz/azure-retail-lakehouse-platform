@@ -88,3 +88,125 @@ def read_gold_execution(spark, report_path):
             recovered[section][name] = frame
 
     return report, recovered["inputs"], recovered["tables"]
+
+
+def validate_gold_relationships(tables):
+    """Comprueba el grano, las claves y las referencias del modelo inicial."""
+    from pyspark.sql import functions as F
+
+    if set(tables) != EXPECTED_GOLD_TABLES:
+        raise ValueError("Inventario Gold incompatible para validar relaciones.")
+
+    unique_keys = (
+        ("dim_product", ("product_key",)),
+        ("dim_product", ("product_id",)),
+        ("dim_customer", ("customer_key",)),
+        ("dim_customer", ("customer_id",)),
+        ("dim_date", ("date_key",)),
+        ("dim_date", ("full_date",)),
+        ("dim_order_status", ("order_status_key",)),
+        ("dim_order_status", ("status",)),
+        ("fact_sales", ("order_id", "line_number")),
+        ("ref_exchange_rates", ("series_code", "observation_date")),
+        ("product_catalog_mapping", ("source_system", "external_product_id")),
+        ("product_catalog_mapping", ("source_system", "product_id")),
+    )
+    positive_columns = {
+        "product_key", "product_id", "customer_key", "customer_id",
+        "date_key", "order_status_key", "order_id", "line_number",
+        "external_product_id",
+    }
+    checks = []
+
+    for table_name, columns in unique_keys:
+        frame = tables[table_name]
+        invalid = F.lit(False)
+
+        for column in columns:
+            invalid = invalid | F.col(column).isNull()
+            if column in positive_columns:
+                invalid = invalid | (F.col(column) <= 0)
+
+        invalid_count = frame.filter(invalid).count()
+        duplicate_groups = (
+            frame.groupBy(*columns)
+            .count()
+            .filter(F.col("count") > 1)
+            .count()
+        )
+
+        check = {
+            "table": table_name,
+            "keys": list(columns),
+            "invalid_key_rows": invalid_count,
+            "duplicate_key_groups": duplicate_groups,
+            "passed": invalid_count == 0 and duplicate_groups == 0,
+        }
+        checks.append(check)
+
+        if not check["passed"]:
+            raise ValueError(f"Clave Gold incompatible: {check}")
+
+    relationships = (
+        ("fact_sales", "product_key", "dim_product", "product_key"),
+        ("fact_sales", "customer_key", "dim_customer", "customer_key"),
+        ("fact_sales", "date_key", "dim_date", "date_key"),
+        (
+            "fact_sales", "order_status_key",
+            "dim_order_status", "order_status_key",
+        ),
+        (
+            "product_catalog_mapping", "product_key",
+            "dim_product", "product_key",
+        ),
+        (
+            "product_catalog_mapping", "product_id",
+            "dim_product", "product_id",
+        ),
+    )
+
+    for source_name, source_column, target_name, target_column in relationships:
+        source = tables[source_name]
+        reference = tables[target_name].select(
+            F.col(target_column).alias(source_column)
+        )
+
+        missing_count = source.join(
+            reference,
+            on=source_column,
+            how="left_anti",
+        ).count()
+
+        check = {
+            "table": source_name,
+            "column": source_column,
+            "reference_table": target_name,
+            "reference_column": target_column,
+            "missing_reference_rows": missing_count,
+            "passed": missing_count == 0,
+        }
+        checks.append(check)
+
+        if not check["passed"]:
+            raise ValueError(f"Referencia Gold inexistente: {check}")
+
+    mismatched_products = tables["product_catalog_mapping"].select(
+        "product_id", "product_key"
+    ).join(
+        tables["dim_product"].select("product_id", "product_key"),
+        on=["product_id", "product_key"],
+        how="left_anti",
+    ).count()
+
+    pair_check = {
+        "table": "product_catalog_mapping",
+        "rule": "product_id_matches_product_key",
+        "invalid_rows": mismatched_products,
+        "passed": mismatched_products == 0,
+    }
+    checks.append(pair_check)
+
+    if not pair_check["passed"]:
+        raise ValueError(f"Correspondencia de producto incompatible: {pair_check}")
+
+    return {"passed": True, "checks": checks}
