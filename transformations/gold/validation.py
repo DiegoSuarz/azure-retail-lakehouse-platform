@@ -684,3 +684,24 @@ def reconcile_product_catalog(inputs, tables):
         raise ValueError(f"Catálogo Gold diferente de Silver: {result}")
 
     return result
+
+
+def validate_gold_model(inputs, tables, report):
+    """Ejecuta los controles del modelo Gold persistido."""
+    results = {}
+
+    results["relationships"] = validate_gold_relationships(tables)
+    results["provenance"] = validate_gold_provenance(tables, report)
+    results["sales_lines"] = reconcile_sales_lines(inputs, tables)
+    results["exchange_rates"] = validate_sales_exchange_rates(inputs, tables)
+    results["sales_usd"] = validate_sales_usd(tables)
+    results["product_catalog"] = reconcile_product_catalog(inputs, tables)
+
+    if not all(result["passed"] for result in results.values()):
+        raise ValueError("El modelo Gold no superó todos los controles.")
+
+    return {
+        "passed": True,
+        "gold_processing_run_id": report["gold_processing_run_id"],
+        "results": results,
+    }
