@@ -599,3 +599,88 @@ def validate_sales_usd(tables):
         raise ValueError(f"Importes USD persistidos incompatibles: {result}")
 
     return result
+
+
+def reconcile_product_catalog(inputs, tables):
+    """Contrasta asociaciones y atributos del catálogo Gold contra Silver."""
+    from pyspark.sql import functions as F
+
+    associations = inputs["product_external_mapping"].select(
+        "source_system",
+        "external_product_id",
+        "product_id",
+        "mapping_type",
+        "mapping_note",
+    )
+
+    local = (
+        inputs["products"]
+        .join(
+            inputs["categories"].select("category_id", "category_name"),
+            on="category_id",
+            how="inner",
+        )
+        .select(
+            "product_id",
+            F.col("sku").alias("local_sku"),
+            F.col("product_name").alias("local_product_name"),
+            F.col("brand").alias("local_brand"),
+            F.col("category_name").alias("local_category_name"),
+            F.col("list_price").alias("local_list_price_pen"),
+        )
+    )
+
+    external = inputs["dummyjson_products"].select(
+        "source_system",
+        "external_product_id",
+        "external_product_name",
+        "external_category",
+        "external_brand",
+        "external_sku",
+        "external_price",
+        "external_currency_code",
+        "external_rating",
+        "external_stock",
+    )
+
+    expected = (
+        associations
+        .join(local, on="product_id", how="inner")
+        .join(
+            external,
+            on=["source_system", "external_product_id"],
+            how="inner",
+        )
+    )
+    actual = tables["product_catalog_mapping"].select(*expected.columns)
+
+    source_count = associations.count()
+    if expected.count() != source_count:
+        raise ValueError(
+            "La referencia de catálogos perdió o multiplicó asociaciones."
+        )
+
+    if [
+        (field.name, field.dataType) for field in actual.schema
+    ] != [
+        (field.name, field.dataType) for field in expected.schema
+    ]:
+        raise ValueError("Tipos de atributos del catálogo incompatibles.")
+
+    missing_or_different = expected.exceptAll(actual).count()
+    extra_or_different = actual.exceptAll(expected).count()
+
+    result = {
+        "source_association_count": source_count,
+        "gold_association_count": actual.count(),
+        "missing_or_different_rows": missing_or_different,
+        "extra_or_different_rows": extra_or_different,
+        "passed": (
+            missing_or_different == 0
+            and extra_or_different == 0
+        ),
+    }
+    if not result["passed"]:
+        raise ValueError(f"Catálogo Gold diferente de Silver: {result}")
+
+    return result
