@@ -210,3 +210,71 @@ def validate_gold_relationships(tables):
         raise ValueError(f"Correspondencia de producto incompatible: {pair_check}")
 
     return {"passed": True, "checks": checks}
+
+
+def validate_gold_provenance(tables, report):
+    """Comprueba que todas las filas pertenezcan a la ejecución registrada."""
+    from datetime import datetime, timezone
+
+    from pyspark.sql import functions as F
+    from pyspark.sql import types as T
+
+    if set(tables) != EXPECTED_GOLD_TABLES:
+        raise ValueError("Inventario Gold incompatible para validar procedencia.")
+
+    run_id = report.get("gold_processing_run_id")
+    if not isinstance(run_id, str) or not run_id.strip():
+        raise ValueError("Identificador de ejecución inválido en el informe.")
+
+    processed_at_text = report.get("gold_processed_at")
+    if not isinstance(processed_at_text, str):
+        raise ValueError("Fecha de procesamiento inválida en el informe.")
+
+    try:
+        processed_at = datetime.fromisoformat(
+            processed_at_text.replace("Z", "+00:00")
+        )
+    except ValueError as error:
+        raise ValueError(
+            "Fecha de procesamiento inválida en el informe."
+        ) from error
+
+    if (
+        processed_at.tzinfo is None
+        or processed_at.utcoffset() is None
+    ):
+        raise ValueError("La fecha del informe debe incluir zona horaria.")
+
+    processed_at_utc = processed_at.astimezone(timezone.utc)
+    checks = []
+
+    for name, frame in tables.items():
+        expected_types = (
+            ("gold_processing_run_id", T.StringType()),
+            ("gold_processed_at", T.TimestampType()),
+        )
+        for column, expected_type in expected_types:
+            if column not in frame.columns:
+                raise ValueError(f"Columna de procedencia ausente: {name}/{column}")
+
+            if frame.schema[column].dataType != expected_type:
+                raise ValueError(f"Tipo de procedencia incompatible: {name}/{column}")
+
+        invalid = (
+            ~F.col("gold_processing_run_id").eqNullSafe(F.lit(run_id))
+            | ~F.col("gold_processed_at").eqNullSafe(F.lit(processed_at_utc))
+        )
+        invalid_count = frame.filter(invalid).count()
+
+        check = {
+            "table": name,
+            "rule": "shared_gold_provenance",
+            "invalid_rows": invalid_count,
+            "passed": invalid_count == 0,
+        }
+        checks.append(check)
+
+        if not check["passed"]:
+            raise ValueError(f"Procedencia Gold incompatible: {check}")
+
+    return {"passed": True, "checks": checks}
