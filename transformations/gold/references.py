@@ -54,3 +54,93 @@ def build_exchange_rate_reference(exchange_rates):
         raise ValueError("Referencia cambiaria duplicada por serie y fecha.")
 
     return reference
+
+
+def build_product_catalog_mapping(mapping, dim_product, external_products):
+    """Reúne atributos de los catálogos según asociaciones educativas."""
+    from transformations.silver.dummyjson_transform import (
+        validate_dummyjson_products,
+    )
+    from transformations.silver.product_mapping_transform import (
+        validate_product_mapping,
+    )
+
+    for column in ("product_id", "product_key"):
+        if dim_product.filter(
+            F.col(column).isNull() | (F.col(column) <= 0)
+        ).limit(1).count():
+            raise ValueError(f"Clave local inválida: {column}")
+
+        if (
+            dim_product.groupBy(column)
+            .count()
+            .filter(F.col("count") > 1)
+            .limit(1)
+            .count()
+        ):
+            raise ValueError(f"Clave local duplicada: {column}")
+
+    validate_dummyjson_products(external_products)
+    validate_product_mapping(mapping, dim_product, external_products)
+
+    associations = mapping.select(
+        "source_system",
+        "external_product_id",
+        "product_id",
+        "mapping_type",
+        "mapping_note",
+    )
+
+    local_catalog = dim_product.select(
+        "product_id",
+        "product_key",
+        F.col("sku").alias("local_sku"),
+        F.col("product_name").alias("local_product_name"),
+        F.col("brand").alias("local_brand"),
+        F.col("category_name").alias("local_category_name"),
+        F.col("list_price").alias("local_list_price_pen"),
+    )
+
+    external_catalog = external_products.select(
+        "source_system",
+        "external_product_id",
+        "external_product_name",
+        "external_category",
+        "external_brand",
+        "external_sku",
+        "external_price",
+        "external_currency_code",
+        "external_rating",
+        "external_stock",
+    )
+
+    return (
+        associations
+        .join(local_catalog, on="product_id", how="inner")
+        .join(
+            external_catalog,
+            on=["source_system", "external_product_id"],
+            how="inner",
+        )
+        .select(
+            "product_key",
+            "product_id",
+            "local_sku",
+            "local_product_name",
+            "local_brand",
+            "local_category_name",
+            "local_list_price_pen",
+            "source_system",
+            "external_product_id",
+            "external_product_name",
+            "external_category",
+            "external_brand",
+            "external_sku",
+            "external_price",
+            "external_currency_code",
+            "external_rating",
+            "external_stock",
+            "mapping_type",
+            "mapping_note",
+        )
+    )
