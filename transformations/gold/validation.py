@@ -387,3 +387,114 @@ def reconcile_sales_lines(inputs, tables):
         raise ValueError(f"Reconciliación de líneas incompatible: {result}")
 
     return result
+
+
+def validate_sales_exchange_rates(inputs, tables):
+    """Contrasta las tasas persistidas con una selección independiente."""
+    from datetime import timedelta
+
+    from pyspark.sql import functions as F
+    from pyspark.sql import types as T
+
+    columns = (
+        "series_code", "observation_date",
+        "rate_pen_per_usd", "available", "raw_value",
+    )
+    silver_rates = inputs["exchange_rates"].select(*columns)
+    gold_rates = tables["ref_exchange_rates"].select(*columns)
+
+    if (
+        silver_rates.exceptAll(gold_rates).limit(1).count()
+        or gold_rates.exceptAll(silver_rates).limit(1).count()
+    ):
+        raise ValueError("La referencia cambiaria Gold difiere de Silver.")
+
+    observations = silver_rates.collect()
+    seen = set()
+    available = []
+
+    for row in observations:
+        key = (row["series_code"], row["observation_date"])
+        if key in seen:
+            raise ValueError("Observación Silver duplicada.")
+        seen.add(key)
+
+        if (
+            row["series_code"] != "PD04638PD"
+            or row["observation_date"] is None
+            or row["raw_value"] is None
+        ):
+            raise ValueError("Observación Silver incompatible.")
+
+        rate = row["rate_pen_per_usd"]
+        if row["available"] is True:
+            if rate is None or rate <= 0:
+                raise ValueError("Tasa Silver disponible inválida.")
+            available.append(row)
+        elif row["available"] is not False or rate is not None:
+            raise ValueError("Disponibilidad Silver incompatible.")
+
+    available.sort(key=lambda row: row["observation_date"])
+
+    sales = tables["fact_sales"].join(
+        tables["dim_date"].select(
+            "date_key",
+            F.col("full_date").alias("business_date"),
+        ),
+        on="date_key",
+        how="left",
+    )
+
+    if sales.filter("business_date IS NULL").limit(1).count():
+        raise ValueError("Venta sin fecha comercial dimensional.")
+
+    expected_records = []
+    for row in sales.select("business_date").distinct().collect():
+        business_date = row["business_date"]
+        candidates = [
+            rate for rate in available
+            if business_date - timedelta(days=7)
+            <= rate["observation_date"] <= business_date
+        ]
+        selected = candidates[-1] if candidates else None
+        expected_records.append((
+            business_date,
+            selected["series_code"] if selected else None,
+            selected["observation_date"] if selected else None,
+            selected["rate_pen_per_usd"] if selected else None,
+            selected is not None,
+        ))
+
+    schema = T.StructType([
+        T.StructField("business_date", T.DateType()),
+        T.StructField("expected_series", T.StringType()),
+        T.StructField("expected_date", T.DateType()),
+        T.StructField("expected_rate", T.DecimalType(20, 14)),
+        T.StructField("expected_available", T.BooleanType()),
+    ])
+    expected = sales.sparkSession.createDataFrame(
+        expected_records, schema
+    )
+    compared = sales.join(expected, on="business_date", how="left")
+
+    invalid = F.lit(False)
+    for actual, reference in (
+        ("exchange_rate_series_code", "expected_series"),
+        ("exchange_rate_date", "expected_date"),
+        ("rate_pen_per_usd", "expected_rate"),
+        ("conversion_available", "expected_available"),
+    ):
+        invalid = invalid | ~F.col(actual).eqNullSafe(F.col(reference))
+
+    invalid_count = compared.filter(invalid).count()
+    if invalid_count:
+        raise ValueError(
+            f"Selección cambiaria incompatible: {invalid_count} líneas."
+        )
+
+    return {
+        "passed": True,
+        "reference_matches_silver": True,
+        "invalid_rate_rows": invalid_count,
+        "business_dates_checked": len(expected_records),
+    }
