@@ -3,7 +3,7 @@
 
 def write_verified_gold_table(spark, frame, target):
     """Crea una tabla Delta y verifica sus tipos y valores recuperados."""
-    frame.write.format("delta").mode("errorifexists").save(target)
+    frame.write.format("delta").mode("error").save(target)
 
     recovered = (
         spark.read.format("delta")
