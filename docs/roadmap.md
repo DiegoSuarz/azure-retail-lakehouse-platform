@@ -22,7 +22,7 @@ en ventanas de uso de Azure para controlar los costos.
 | M6 | Reglas de calidad, validaciones y cuarentena | Completado |
 | M7 | Transformaciones PySpark y tablas Delta en Silver | Completado |
 | M8 | CDC real de productos, incrementales e idempotencia | Completado |
-| M9 | Modelo estrella y capa Gold | Pendiente |
+| M9 | Modelo estrella y capa Gold | Implementado y verificado; cierre pendiente |
 | M10 | Dimensiones con SCD tipo 1 y tipo 2 | Pendiente |
 | M11 | MERGE, evolución de esquemas, time travel y retención | Pendiente |
 | M12 | Publicación Parquet y vistas en Synapse Serverless | Pendiente |
@@ -116,8 +116,13 @@ M8 dispone de CDC real de productos, extracción por LSN y aplicación
 incremental a Delta verificadas en local y Azure.
 M8 está completado e integrado en main mediante el PR #15,
 commit 212e996.
-El siguiente módulo previsto es M9: modelo estrella y capa Gold.
-Gold y el consumo analítico siguen pendientes.
+M9 dispone de siete tablas Gold persistidas, validadas y registradas
+en Unity Catalog, con consultas y controles ejecutados en Azure.
+La ejecución aceptada es 953a045c-f46b-4f1a-bb98-5003f14b6930.
+El cómputo quedó detenido y el NAT Gateway y su IP pública eliminados.
+La integración de M9 en main y el costo definitivo siguen pendientes.
+El siguiente módulo previsto es M10: dimensiones con SCD tipo 1 y tipo 2.
+La publicación en Synapse y el consumo mediante Power BI siguen pendientes.
 
 Las comprobaciones de disponibilidad y costos pendientes de M0
 se resolverán antes de los despliegues correspondientes.
@@ -131,3 +136,4 @@ se resolverán antes de los despliegues correspondientes.
 - [M6 — Reglas de calidad, validaciones y cuarentena](modules/m6-data-quality.md)
 - [M7 — Transformaciones Silver](modules/m7-silver-transformation.md)
 - [M8 — CDC real, incrementales e idempotencia](modules/m8-incremental-processing.md)
+- [M9 — Modelo estrella y capa Gold](modules/m9-gold-star-schema.md)

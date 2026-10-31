@@ -85,8 +85,9 @@ Este documento registra la evidencia; no contiene los archivos Delta.
 
 ## Pendientes
 
-- Preparar y ejecutar la construcción en Azure.
-- Documentar el cierre general de M9 al completar su alcance.
+- Construcción en Azure ejecutada y validada el 31 de octubre de 2026.
+- Evidencia Azure y pendientes de cierre en
+  [M9 — Modelo estrella y capa Gold](../modules/m9-gold-star-schema.md).
 
 ## Consultas SQL verificadas
 
