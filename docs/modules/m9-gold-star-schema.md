@@ -161,7 +161,9 @@ El notebook de construcción no debe repetirse sobre destinos existentes.
 Una ejecución parcial requiere revisar la recuperación.
 
 Implementación y ejecución local y Azure verificadas.
-Documentación de cierre preparada en feature/m9-gold-star-schema.
-Integración en main y revisión del costo definitivo pendientes.
+M9 integrado en main mediante el
+[PR #17](https://github.com/DiegoSuarz/azure-retail-lakehouse-platform/pull/17),
+commit 8bf7398.
+La revisión del costo definitivo permanece pendiente.
 
 El siguiente módulo previsto es M10: dimensiones con SCD tipo 1 y tipo 2.

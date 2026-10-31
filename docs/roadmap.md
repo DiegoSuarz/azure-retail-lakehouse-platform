@@ -120,7 +120,8 @@ M9 dispone de siete tablas Gold persistidas, validadas y registradas
 en Unity Catalog, con consultas y controles ejecutados en Azure.
 La ejecución aceptada es 953a045c-f46b-4f1a-bb98-5003f14b6930.
 El cómputo quedó detenido y el NAT Gateway y su IP pública eliminados.
-La integración de M9 en main y el costo definitivo siguen pendientes.
+M9 está integrado en main mediante el PR #17, commit 8bf7398.
+La revisión del costo definitivo permanece pendiente.
 El siguiente módulo previsto es M10: dimensiones con SCD tipo 1 y tipo 2.
 La publicación en Synapse y el consumo mediante Power BI siguen pendientes.
 
