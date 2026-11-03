@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import hashlib
 import json
 import random
 from datetime import datetime, timedelta, timezone
@@ -44,6 +45,7 @@ def write_csv(path, rows):
         writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def generate(seed):
