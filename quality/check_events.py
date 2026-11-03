@@ -15,16 +15,14 @@ from check_new_orders import SCHEMA
 from event_reference import KEYS, initial_context, after_batch_001_context
 from event_rules import canonical, evaluate_event
 from record_rules import issue
-from validate_batch_transport import validate_transport, TransportError
+from validate_batch_transport import read_batch, TransportError
 
 EVENT_SCHEMA = SCHEMA.append(pa.field("event_id", pa.string()))
 STATUSES = ("accepted", "rejected", "conflict", "pending", "duplicate")
 
 
-def evaluate_file(path, metadata, context):
-    payload = path.read_bytes()
-    if hashlib.sha256(payload).hexdigest() != metadata["sha256"]:
-        raise TransportError("DQ002", "Archivo cambió durante la evaluación", path.name)
+def evaluate_file(path, payload, context):
+    """Evalúa el contenido JSONL previamente validado."""
 
     records = []
     id_groups = defaultdict(list)
@@ -174,9 +172,8 @@ def main():
 
     records = None
     try:
-        batch_id, counts = validate_transport(source)
-        manifest = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
-        if "changes.jsonl" not in manifest["files"]:
+        batch_id, payloads, counts = read_batch(source)
+        if "changes.jsonl" not in payloads:
             parser.error("El lote no contiene eventos JSONL.")
 
         context = (
@@ -184,7 +181,7 @@ def main():
             else after_batch_001_context()
         )
         records = evaluate_file(
-            source / "changes.jsonl", manifest["files"]["changes.jsonl"], context,
+            source / "changes.jsonl", payloads["changes.jsonl"], context,
         )
         classifications = Counter(record["status"] for record in records)
         summary = {

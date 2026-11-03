@@ -1,9 +1,14 @@
 """Valida los escenarios de reproceso y orden sin modificar las fuentes."""
 
 import hashlib
+import argparse
+import sys
 import json
 from datetime import datetime
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "quality"))
+from validate_batch_transport import read_batch as read_transport_batch
 
 ROOT = Path("data/incremental")
 
@@ -19,35 +24,33 @@ def date(value):
 
 def read_batch(relative):
     directory = ROOT / relative
-    manifest = json.loads(
-        (directory / "manifest.json").read_text(encoding="utf-8")
+    expected_files = (
+        {"orders.csv", "order_items.csv", "changes.jsonl"}
+        if directory.name == "batch_001" else {"changes.jsonl"}
     )
-    require(manifest["batch_id"] == directory.name, "Identidad de lote")
-    require(manifest["schema_version"] == 1, "Versión de manifiesto")
-
-    for filename, metadata in manifest["files"].items():
-        path = directory / filename
-        require(path.is_file(), f"Archivo ausente: {path}")
-        require(
-            hashlib.sha256(path.read_bytes()).hexdigest() == metadata["sha256"],
-            f"Hash incorrecto: {path}",
-        )
-
+    batch_id, payloads, _ = read_transport_batch(
+        directory, expected_files=expected_files
+    )
     events = [
         json.loads(line)
-        for line in (directory / "changes.jsonl").read_text(
-            encoding="utf-8"
-        ).splitlines()
+        for line in payloads["changes.jsonl"].decode("utf-8").splitlines()
         if line.strip()
     ]
-    require(
-        len(events) == manifest["files"]["changes.jsonl"]["row_count"],
-        "Conteo de eventos",
-    )
-    return manifest, events
+    reference = {
+        "batch_id": batch_id,
+        "files": {
+            filename: hashlib.sha256(payload).hexdigest()
+            for filename, payload in payloads.items()
+        },
+    }
+    return reference, events
 
 
 def main():
+    global ROOT
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--data-dir", type=Path, default=ROOT)
+    ROOT = parser.parse_args().data_dir
     expected = json.loads(
         (ROOT / "ordering-expectations.json").read_text(encoding="utf-8")
     )
@@ -112,14 +115,14 @@ def main():
     state = None
 
     for delivery_number, relative in enumerate(deliveries, 1):
-        manifest, events = batches[relative]
-        batch_id = manifest["batch_id"]
+        batch_reference, events = batches[relative]
+        batch_id = batch_reference["batch_id"]
         applied = 0
 
         if batch_id in seen_batches:
-            require(seen_batches[batch_id] == manifest, "Conflicto de lote")
+            require(seen_batches[batch_id] == batch_reference, "Conflicto de lote")
         else:
-            seen_batches[batch_id] = manifest
+            seen_batches[batch_id] = batch_reference
             for event in events:
                 if (
                     event["entity"] != "customers"
@@ -194,8 +197,8 @@ def main():
     require(len(seen_events) == 3, "Conteo de eventos únicos del cliente")
 
     for relative in deliveries[2:]:
-        manifest, events = batches[relative]
-        require(set(manifest["files"]) == {"changes.jsonl"}, "Archivo inesperado")
+        batch_reference, events = batches[relative]
+        require(set(batch_reference["files"]) == {"changes.jsonl"}, "Archivo inesperado")
         require(
             all(
                 event["entity"] == "customers"
@@ -209,7 +212,7 @@ def main():
         "Expectativa de ventas",
     )
 
-    print("PASS: hashes y conteos de los archivos de eventos.")
+    print("PASS: estructura de lotes y referencias de contenido calculadas.")
     print("PASS: reproceso del lote y duplicados exactos.")
     print("PASS: secuencia 3 pendiente hasta recibir secuencia 2.")
     print("PASS: empate temporal resuelto por event_sequence.")

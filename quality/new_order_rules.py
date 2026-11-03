@@ -1,7 +1,6 @@
 """Evalúa pedidos nuevos y propaga rechazos a sus líneas."""
 
 import csv
-import hashlib
 import io
 import json
 from collections import Counter
@@ -11,14 +10,11 @@ from record_rules import (
     parse_order, parse_item, check_customer, check_product,
     check_item_parent, issue,
 )
-from validate_batch_transport import validate_transport, TransportError
+from validate_batch_transport import read_batch
 
 
-def read_records(directory, filename, metadata, parser, entity):
+def read_records(directory, filename, payload, parser, entity):
     path = directory / filename
-    payload = path.read_bytes()
-    if hashlib.sha256(payload).hexdigest() != metadata["sha256"]:
-        raise TransportError("DQ002", "Archivo cambió después de validarse", filename)
 
     text = payload.decode("utf-8")
     physical_lines = text.splitlines(keepends=True)
@@ -44,22 +40,16 @@ def read_records(directory, filename, metadata, parser, entity):
 
 def evaluate_new_orders(directory, reference):
     directory = Path(directory)
-    manifest_bytes = (directory / "manifest.json").read_bytes()
-    manifest = json.loads(manifest_bytes)
-    batch_id, counts = validate_transport(directory)
-
-    if (directory / "manifest.json").read_bytes() != manifest_bytes:
-        raise TransportError("DQ002", "Manifiesto cambió durante la validación")
-
-    if "orders.csv" not in manifest["files"]:
+    batch_id, payloads, counts = read_batch(directory)
+    if "orders.csv" not in payloads:
         raise ValueError("Este evaluador requiere pedidos y líneas CSV.")
 
     orders = read_records(
-        directory, "orders.csv", manifest["files"]["orders.csv"],
+        directory, "orders.csv", payloads["orders.csv"],
         parse_order, "orders",
     )
     items = read_records(
-        directory, "order_items.csv", manifest["files"]["order_items.csv"],
+        directory, "order_items.csv", payloads["order_items.csv"],
         parse_item, "order_items",
     )
     customer_ids = {int(row["customer_id"]) for row in reference["customers"]}

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from new_order_rules import evaluate_new_orders
 from reference_data import ROOT, load_initial_reference
-from validate_batch_transport import validate_transport
+from validate_batch_transport import read_batch
 
 KEYS = {
     "categories": "category_id",
@@ -58,19 +58,13 @@ def initial_context():
     }
 
 
-def verified_payload(directory, filename, metadata):
-    payload = (directory / filename).read_bytes()
-    if hashlib.sha256(payload).hexdigest() != metadata["sha256"]:
-        raise RuntimeError(f"Referencia modificada: {filename}")
-    return payload
-
-
 def after_batch_001_context():
     context = initial_context()
     directory = ROOT / "data/incremental/functional/batch_001"
-    validate_transport(directory)
-    manifest = json.loads(
-        (directory / "manifest.json").read_text(encoding="utf-8")
+    _, payloads, _ = read_batch(
+        directory,
+        expected_batch_id="batch_001",
+        expected_files={"orders.csv", "order_items.csv", "changes.jsonl"},
     )
     expectations = json.loads(
         (ROOT / "data/incremental/expectations.json").read_text(encoding="utf-8")
@@ -93,9 +87,7 @@ def after_batch_001_context():
         if summary["accepted"] != summary["read"]:
             raise RuntimeError("Los pedidos del lote de referencia no son válidos")
 
-    payload = verified_payload(
-        directory, "orders.csv", manifest["files"]["orders.csv"],
-    )
+    payload = payloads["orders.csv"]
     reader = csv.DictReader(io.StringIO(payload.decode("utf-8"), newline=""))
     for row in reader:
         record = normalized_row(row)
@@ -104,9 +96,7 @@ def after_batch_001_context():
             raise RuntimeError("Pedido nuevo colisiona con referencia inicial")
         context["records"]["orders"][identifier] = record
 
-    payload = verified_payload(
-        directory, "changes.jsonl", manifest["files"]["changes.jsonl"],
-    )
+    payload = payloads["changes.jsonl"]
     events = [
         json.loads(line) for line in payload.decode("utf-8").splitlines()
         if line.strip()

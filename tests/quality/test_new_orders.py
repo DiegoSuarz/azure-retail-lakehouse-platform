@@ -89,7 +89,7 @@ class NewOrderQualityTests(unittest.TestCase):
                         key = json.loads(record["business_key_json"])
                         self.assertEqual(key["order_id"], 2001)
                         self.assertEqual(record["status"], "rejected")
-                        self.assertEqual(record["batch_id"], f"invalid_{scenario.lower()}")
+                        self.assertEqual(record["batch_id"], scenario)
                         self.assertIsNone(record["ingestion_run_id"])
                         self.assertEqual(
                             record["processing_run_id"],
@@ -108,7 +108,7 @@ class NewOrderQualityTests(unittest.TestCase):
                             lines[record["record_number"]],
                         )
 
-    def test_bad_hash_blocks_before_business_processing(self):
+    def test_malformed_jsonl_blocks_before_business_processing(self):
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / "blocked"
             _, result, report = self.execute_case("invalid/S18", output)
@@ -118,7 +118,7 @@ class NewOrderQualityTests(unittest.TestCase):
             self.assertNotIn("entities", report)
             self.assertEqual(report["quarantine_files"], [])
             self.assertEqual(list(output.glob("*.parquet")), [])
-            self.assertIn("DQ002", {error["code"] for error in report["errors"]})
+            self.assertIn("DQ004", {error["code"] for error in report["errors"]})
 
 
 if __name__ == "__main__":

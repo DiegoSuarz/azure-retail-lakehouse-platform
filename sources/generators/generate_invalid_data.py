@@ -1,7 +1,6 @@
 """Genera casos inválidos aislados para los escenarios S13–S20."""
 
 import argparse
-import hashlib
 import json
 from copy import deepcopy
 from datetime import timedelta
@@ -20,20 +19,15 @@ def read_csv(path):
 
 
 def write_case(root, scenario, baseline, reason, orders=None, items=None,
-               events=None, corrupt_hash=False):
+               events=None, corrupt_json=False):
     directory = root / "invalid" / scenario
     directory.mkdir(parents=True)
-    files = {}
-
     for filename, rows in (
         ("orders.csv", orders),
         ("order_items.csv", items),
     ):
         if rows is not None:
-            files[filename] = {
-                "row_count": len(rows),
-                "sha256": write_csv(directory / filename, rows),
-            }
+            write_csv(directory / filename, rows)
 
     if events is not None:
         path = directory / "changes.jsonl"
@@ -44,20 +38,12 @@ def write_case(root, scenario, baseline, reason, orders=None, items=None,
             ),
             encoding="utf-8",
         )
-        files["changes.jsonl"] = {
-            "row_count": len(events),
-            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-        }
 
-    if corrupt_hash:
-        files["changes.jsonl"]["sha256"] = "0" * 64
+    if corrupt_json:
+        (directory / "changes.jsonl").write_text(
+            '{"event_id":\n', encoding="utf-8"
+        )
 
-    write_json(directory / "manifest.json", {
-        "schema_version": 1,
-        "batch_id": f"invalid_{scenario.lower()}",
-        "created_at": timestamp(CUTOFF + timedelta(days=1)),
-        "files": files,
-    })
     return {
         "scenario": scenario,
         "directory": f"invalid/{scenario}",
@@ -80,13 +66,9 @@ def main():
 
     datasets, _ = read_initial(args.initial_dir)
     first = root / "functional" / "batch_001"
-    manifest = json.loads(
-        (first / "manifest.json").read_text(encoding="utf-8")
-    )
-    for filename, metadata in manifest["files"].items():
-        payload = (first / filename).read_bytes()
-        if hashlib.sha256(payload).hexdigest() != metadata["sha256"]:
-            parser.error(f"Archivo funcional modificado: {filename}")
+    required_files = {"orders.csv", "order_items.csv", "changes.jsonl"}
+    if {path.name for path in first.iterdir()} != required_files:
+        parser.error("El primer lote debe contener exactamente sus tres archivos.")
 
     events = [
         json.loads(line)
@@ -146,8 +128,8 @@ def main():
     ))
 
     cases.append(write_case(
-        root, "S18", "initial", "manifest_hash_mismatch",
-        events=[deepcopy(customer_event)], corrupt_hash=True,
+        root, "S18", "initial", "malformed_jsonl",
+        events=[deepcopy(customer_event)], corrupt_json=True,
     ))
 
     pending = min(

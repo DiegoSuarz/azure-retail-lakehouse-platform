@@ -1,17 +1,14 @@
 """Genera escenarios S08–S12 sobre el primer lote funcional."""
 
 import argparse
-import hashlib
 import json
 from copy import deepcopy
-from datetime import timedelta
 from pathlib import Path
 
-from generate_initial_data import CUTOFF, timestamp
 from generate_incremental_data import make_event, write_json
 
 
-def write_batch(root, batch_id, events, hour):
+def write_batch(root, batch_id, events):
     directory = root / "functional" / batch_id
     directory.mkdir(parents=True)
     path = directory / "changes.jsonl"
@@ -22,17 +19,7 @@ def write_batch(root, batch_id, events, hour):
         ),
         encoding="utf-8",
     )
-    write_json(directory / "manifest.json", {
-        "schema_version": 1,
-        "batch_id": batch_id,
-        "created_at": timestamp(CUTOFF + timedelta(hours=hour)),
-        "files": {
-            "changes.jsonl": {
-                "row_count": len(events),
-                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-            }
-        },
-    })
+
 
 
 def main():
@@ -43,20 +30,11 @@ def main():
     args = parser.parse_args()
     root = args.output_dir
     first = root / "functional" / "batch_001"
-    manifest = json.loads(
-        (first / "manifest.json").read_text(encoding="utf-8")
-    )
     payload = (first / "changes.jsonl").read_bytes()
-    metadata = manifest["files"]["changes.jsonl"]
-    if hashlib.sha256(payload).hexdigest() != metadata["sha256"]:
-        parser.error("El archivo de eventos inicial fue modificado.")
-
     events = [
         json.loads(line) for line in payload.decode("utf-8").splitlines()
         if line.strip()
     ]
-    if len(events) != metadata["row_count"]:
-        parser.error("El conteo del archivo de eventos no coincide.")
 
     candidates = [
         event for event in events if event["entity"] == "customers"
@@ -81,9 +59,9 @@ def main():
         {"city": "Piura", "region": "Piura"}, 9, sequence=3,
     )
 
-    write_batch(root, "batch_002", [deepcopy(first_event), third], 10)
-    write_batch(root, "batch_003", [second], 11)
-    write_batch(root, "batch_004", [deepcopy(second)], 12)
+    write_batch(root, "batch_002", [deepcopy(first_event), third])
+    write_batch(root, "batch_003", [second])
+    write_batch(root, "batch_004", [deepcopy(second)])
 
     write_json(root / "ordering-expectations.json", {
         "schema_version": 1,

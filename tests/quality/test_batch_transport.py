@@ -1,8 +1,6 @@
 """Comprueba el bloqueo de lotes con defectos de transporte."""
 
-import hashlib
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -11,15 +9,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "quality/validate_batch_transport.py"
-SOURCE = ROOT / "data/incremental/functional/batch_001"
+sys.path.insert(0, str(ROOT / "quality"))
+from validate_batch_transport import HEADERS
 
 
 class BatchTransportTests(unittest.TestCase):
     def test_defective_batches_are_blocked(self):
         cases = (
-            ("invalid_manifest", "DQ001"),
+            ("incorrect_identity", "DQ001"),
             ("missing_file", "DQ002"),
-            ("incorrect_count", "DQ003"),
+            ("additional_file", "DQ002"),
+            ("malformed_jsonl", "DQ004"),
             ("incorrect_header", "DQ004"),
         )
 
@@ -28,38 +28,31 @@ class BatchTransportTests(unittest.TestCase):
                 with tempfile.TemporaryDirectory() as temporary:
                     root = Path(temporary)
                     batch = root / "batch"
-                    shutil.copytree(SOURCE, batch)
-                    manifest_path = batch / "manifest.json"
-                    manifest = json.loads(
-                        manifest_path.read_text(encoding="utf-8")
-                    )
-
-                    if defect == "invalid_manifest":
-                        manifest["schema_version"] = 999
-                    elif defect == "missing_file":
-                        (batch / "orders.csv").unlink()
-                    elif defect == "incorrect_count":
-                        manifest["files"]["orders.csv"]["row_count"] += 1
-                    else:
-                        path = batch / "orders.csv"
-                        payload = path.read_bytes()
-                        header, separator, records = payload.partition(b"\n")
-                        self.assertTrue(separator)
-                        header = header.replace(
-                            b"order_id", b"unexpected_id", 1
+                    batch.mkdir()
+                    for filename, fields in HEADERS.items():
+                        (batch / filename).write_text(
+                            ",".join(fields) + "\n", encoding="utf-8"
                         )
-                        payload = header + separator + records
-                        path.write_bytes(payload)
-
-                        # Hash correcto para aislar el defecto de estructura.
-                        metadata = manifest["files"]["orders.csv"]
-                        metadata["sha256"] = hashlib.sha256(payload).hexdigest()
-                        if "size_bytes" in metadata:
-                            metadata["size_bytes"] = len(payload)
-
-                    manifest_path.write_text(
-                        json.dumps(manifest) + "\n", encoding="utf-8"
+                    (batch / "changes.jsonl").write_text(
+                        "{}\n", encoding="utf-8"
                     )
+
+                    if defect == "missing_file":
+                        (batch / "orders.csv").unlink()
+                    elif defect == "additional_file":
+                        (batch / "unexpected.txt").write_text("extra")
+                    elif defect == "malformed_jsonl":
+                        (batch / "changes.jsonl").write_text(
+                            '{"event_id":\n', encoding="utf-8"
+                        )
+                    elif defect == "incorrect_header":
+                        path = batch / "orders.csv"
+                        path.write_text(
+                            path.read_text(encoding="utf-8").replace(
+                                "order_id", "unexpected_id", 1
+                            ),
+                            encoding="utf-8",
+                        )
 
                     before = {
                         path.relative_to(batch): path.read_bytes()
@@ -70,6 +63,8 @@ class BatchTransportTests(unittest.TestCase):
                         [
                             sys.executable, str(SCRIPT),
                             "--batch-dir", str(batch),
+                            "--expected-batch-id",
+                            "different" if defect == "incorrect_identity" else "batch",
                             "--report", str(report_path),
                         ],
                         cwd=ROOT, capture_output=True, text=True,

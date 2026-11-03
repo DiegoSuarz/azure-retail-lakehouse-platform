@@ -260,13 +260,11 @@ def main():
 
     batch_dir = args.output_dir / "functional" / "batch_001"
     batch_dir.mkdir(parents=True, exist_ok=True)
-    files = {}
     for filename, rows in (
         ("orders.csv", orders),
         ("order_items.csv", items),
     ):
-        digest = write_csv(batch_dir / filename, rows)
-        files[filename] = {"row_count": len(rows), "sha256": digest}
+        write_csv(batch_dir / filename, rows)
 
     event_path = batch_dir / "changes.jsonl"
     event_path.write_text(
@@ -276,17 +274,7 @@ def main():
         ),
         encoding="utf-8",
     )
-    files["changes.jsonl"] = {
-        "row_count": len(events),
-        "sha256": hashlib.sha256(event_path.read_bytes()).hexdigest(),
-    }
 
-    write_json(batch_dir / "manifest.json", {
-        "schema_version": 1,
-        "batch_id": "batch_001",
-        "created_at": timestamp(CUTOFF + timedelta(hours=8)),
-        "files": files,
-    })
     write_json(args.output_dir / "expectations.json", expectations)
 
     print("GENERADO: functional/batch_001")

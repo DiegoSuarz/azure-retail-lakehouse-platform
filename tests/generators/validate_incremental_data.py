@@ -1,6 +1,7 @@
 """Valida el primer lote funcional y sus expectativas."""
 
 import csv
+import argparse
 import hashlib
 import json
 from collections import Counter
@@ -46,11 +47,15 @@ def controls(orders, items):
 
 
 def main():
+    global INITIAL, OUTPUT, BATCH
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--initial-dir", type=Path, default=INITIAL)
+    parser.add_argument("--data-dir", type=Path, default=OUTPUT)
+    args = parser.parse_args()
+    INITIAL, OUTPUT = args.initial_dir, args.data_dir
+    BATCH = OUTPUT / "functional" / "batch_001"
     expectations = json.loads(
         (OUTPUT / "expectations.json").read_text(encoding="utf-8")
-    )
-    manifest = json.loads(
-        (BATCH / "manifest.json").read_text(encoding="utf-8")
     )
     cutoff = date("2026-10-01T00:00:00.000Z")
 
@@ -61,10 +66,8 @@ def main():
             f"Conjunto inicial modificado: {filename}",
         )
 
-    require(manifest["schema_version"] == 1, "Versión del manifiesto")
-    require(manifest["batch_id"] == "batch_001", "Identidad del lote")
     require(
-        set(manifest["files"]) == {
+        {path.name for path in BATCH.iterdir()} == {
             "orders.csv", "order_items.csv", "changes.jsonl"
         },
         "Archivos del lote",
@@ -79,20 +82,6 @@ def main():
         ).splitlines()
         if line.strip()
     ]
-    received = {
-        "orders.csv": new_orders,
-        "order_items.csv": new_items,
-        "changes.jsonl": events,
-    }
-    for filename, rows in received.items():
-        metadata = manifest["files"][filename]
-        require(len(rows) == metadata["row_count"], f"Conteo: {filename}")
-        require(
-            hashlib.sha256((BATCH / filename).read_bytes()).hexdigest()
-            == metadata["sha256"],
-            f"Hash: {filename}",
-        )
-
     customers = {
         int(row["customer_id"]): row
         for row in read_csv(INITIAL / "customers.csv")
@@ -254,7 +243,7 @@ def main():
         "Cobertura declarada",
     )
 
-    print("PASS: hashes y conteos del lote.")
+    print("PASS: referencia inicial y archivos del lote comprobados.")
     print("PASS: claves, relaciones y reglas de los pedidos nuevos.")
     print("PASS: imágenes, secuencias y transiciones de los seis eventos.")
     print("PASS: estados finales e importes reconciliados independientemente.")

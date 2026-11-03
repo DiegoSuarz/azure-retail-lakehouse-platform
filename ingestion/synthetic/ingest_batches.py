@@ -95,7 +95,7 @@ def main():
 
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
-        manifests = {}
+        validated_batches = {}
 
         for batch_id in BATCHES:
             source = args.source_dir / batch_id
@@ -104,13 +104,13 @@ def main():
             staged = root / batch_id
             staged.mkdir()
 
-            for filename in [*original["files"], "manifest.json"]:
+            for filename in original["files"]:
                 shutil.copyfile(source / filename, staged / filename)
 
-            manifests[batch_id] = validate_batch(staged)
+            validated_batches[batch_id] = validate_batch(staged)
             require(
-                manifests[batch_id] == original,
-                f"El manifiesto cambió durante la preparación: {batch_id}",
+                validated_batches[batch_id] == original,
+                f"Los datos cambiaron durante la preparación: {batch_id}",
             )
             prefix = (
                 f"synthetic/incremental/batch_id={batch_id}/"
@@ -138,11 +138,11 @@ def main():
         try:
             for batch_id in BATCHES:
                 staged = root / batch_id
-                manifest = manifests[batch_id]
+                validated_batch = validated_batches[batch_id]
                 batch = report["batches"][batch_id]
                 batch["status"] = "in_progress"
 
-                filenames = [*manifest["files"], "manifest.json"]
+                filenames = list(validated_batch["files"])
                 for filename in filenames:
                     path = staged / filename
                     digest = hashlib.sha256(path.read_bytes()).hexdigest()
