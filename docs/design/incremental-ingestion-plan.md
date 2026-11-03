@@ -29,16 +29,16 @@ Lotes incluidos: batch_001, batch_002, batch_003 y batch_004.
 
 ## Procedimiento por lote
 
-1. Validar identidad, versión y archivos declarados en el manifiesto.
-2. Comprobar conteos y hashes SHA-256 de los archivos locales.
-3. Subir los archivos de datos sin sobrescribir objetos existentes.
-4. Descargar los archivos publicados y comprobar sus hashes.
-5. Publicar el manifiesto original después de verificar los datos.
-6. Descargar el manifiesto y compararlo byte por byte con el original.
+1. Validar estructura, nombres admitidos y entrega conjunta de CSV.
+2. Calcular conteos y hashes de los datos locales.
+3. Preparar una copia temporal y contrastar su contenido.
+4. Subir los archivos de datos sin sobrescribir objetos existentes.
+5. Descargar los archivos publicados y comprobar sus hashes.
+6. Registrar los resultados en el informe de ejecución.
 
-El manifiesto original se conservará sin cambios.
-Su created_at representa la publicación sintética del lote,
-no el momento real de ingesta en Azure.
+No se genera ni publica un manifiesto.
+El procesamiento no debe iniciarse mientras se prepara la entrega.
+La publicación de varios archivos no es una transacción atómica.
 
 ## Auditoría y fallos
 
@@ -47,7 +47,8 @@ fechas UTC, rutas y resultados de verificación por lote.
 
 Un fallo detendrá la ejecución.
 Los lotes ya publicados conservarán su estado.
-Un lote sin manifiesto se considerará incompleto.
+La aceptación requiere revisar el informe y todos los archivos esperados;
+la existencia de una carpeta no acredita finalización.
 
 No se eliminarán automáticamente archivos parciales.
 No se reintentará una ejecución con otro identificador sin revisar
@@ -70,6 +71,9 @@ transferencia cuando corresponda y capacidad por los archivos conservados.
 
 Lotes funcionales validados localmente.
 Cargador implementado y cuatro lotes funcionales publicados en Bronze.
-Los diez archivos se verificaron mediante descarga y hash SHA-256.
+La publicación histórica incluyó diez archivos, contando los manifiestos,
+verificados mediante descarga y SHA-256.
+El flujo actual prepara seis archivos de datos y no publica manifiestos.
+Su preparación local se comprobó sin realizar una publicación nueva.
 Ejecución: 1c55b98a-9a92-4637-b4fe-a3528ae92565.
 La aplicación de eventos en Silver permanece pendiente.

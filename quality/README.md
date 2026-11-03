@@ -5,15 +5,14 @@
 validate_batch_transport.py implementa los controles de transporte
 DQ001–DQ004 definidos en docs/design/data-quality-rules.md.
 
-Comprueba:
+Comprueba identidad obtenida de la carpeta, archivos admitidos,
+entrega conjunta de pedidos y líneas, UTF-8, encabezados CSV
+y estructura JSONL. Calcula conteos desde los bytes leídos.
 
-- Manifiesto, versión, identidad y fecha de publicación.
-- Inventario de archivos y entrega conjunta de pedidos y líneas.
-- Hashes SHA-256 y tamaños cuando estén declarados.
-- Conteos, encabezados CSV y estructura JSONL.
-
-No exige que el nombre de la carpeta coincida con batch_id.
-Puede comprobar una identidad explícita mediante --expected-batch-id.
+Puede contrastar la identidad mediante --expected-batch-id.
+read_batch admite también un conjunto explícito de archivos esperados.
+Sin él, no detecta la ausencia de un grupo opcional completo.
+No contrasta conteos ni hashes con un manifiesto.
 
 ## Ejecución
 
@@ -27,7 +26,7 @@ El informe debe estar fuera del lote y no se sobrescribe.
 
 ## Resultados
 
-- transport_validated: integridad y estructura verificadas.
+- transport_validated: identidad, archivos y estructura verificados.
 - blocked: el lote no debe avanzar a validación de negocio.
 
 Código de salida: cero para transporte validado y uno para lote bloqueado.
@@ -42,7 +41,7 @@ El script no modifica los archivos de entrada ni publica en Azure.
 
 - batch_001 a batch_004: transport_validated.
 - S16: transport_validated, con referencia inválida pendiente de DQ007.
-- S18: blocked por DQ002, sin interpretar los registros.
+- S18 vigente: blocked por DQ004 debido a JSONL mal formado.
 
 Se comprobaron clasificaciones, códigos de salida y alcance del informe.
 Los informes de prueba se generaron en una carpeta temporal y se eliminaron.
@@ -58,7 +57,7 @@ Eventos y controles de API pendientes.
 
 Componentes:
 
-- reference_data.py: verifica hashes y conteos de la referencia inicial.
+- reference_data.py: lee los cinco CSV iniciales y revisa su estructura básica.
 - record_rules.py: comprueba tipos, valores, fechas y referencias.
 - new_order_rules.py: evalúa pedidos y propaga rechazos a sus líneas.
 - check_new_orders.py: genera informe y cuarentena Parquet local.
@@ -105,7 +104,7 @@ Resultados comprobados:
 - batch_001: dos pedidos y dos líneas aceptados, sin cuarentena.
 - S16: un pedido y una línea rechazados por referencia inválida.
 - S17: un pedido y una línea rechazados por descuento inválido.
-- S18: lote bloqueado por hash, sin procesamiento de registros.
+- S18 vigente: JSONL mal formado, bloqueado antes de evaluar negocio.
 - Contenido, motivos, hashes y conteos de los Parquet verificados.
 
 Las salidas de prueba se crean en carpetas temporales y se eliminan.
@@ -182,12 +181,11 @@ en Azure siguen pendientes en M6.
 
 ## Pruebas adicionales de transporte
 
-test_batch_transport.py comprueba cuatro defectos sobre copias temporales:
+test_batch_transport.py comprueba cinco defectos en carpetas temporales:
 
-- DQ001: versión de manifiesto incompatible.
-- DQ002: archivo declarado ausente.
-- DQ003: conteo diferente del manifiesto.
-- DQ004: encabezado CSV incompatible, conservando un hash correcto.
+- DQ001: identidad diferente de la esperada.
+- DQ002: archivo ausente o adicional.
+- DQ004: JSONL mal formado o encabezado CSV incompatible.
 
 Todos los casos generan un informe blocked, sin procesar registros
 de negocio ni modificar las entradas.
@@ -227,9 +225,9 @@ Componentes:
 - api_extraction_input.py: verifica identidad, inventario, hashes,
   tamaños, JSON y metadatos de procedencia.
 - dummyjson_rules.py: evalúa categorías, paginación, identificadores,
-  productos y controles del manifiesto.
+  productos y coherencia de las respuestas.
 - bcrpdata_rules.py: evalúa serie solicitada, intervalo, fechas,
-  tasas y controles del manifiesto.
+  tasas y coherencia con la URL conservada.
 
 Resultados de las extracciones conservadas de M5:
 
@@ -243,41 +241,13 @@ Las pruebas comprueban paginación incorrecta, productos inválidos,
 fechas inválidas, tasas negativas y fechas duplicadas.
 Los defectos se introducen en copias en memoria.
 
-Cuando existen observaciones rechazadas de BCRPData, no se declara
-superada la reconciliación completa de controles del manifiesto.
+source_validation indica si todos los registros superaron las reglas
+evaluadas. No representa reconciliación contra controles de un manifiesto.
+La disponibilidad se informa por separado.
 
 Los evaluadores no modifican los archivos conservados.
 El informe persistente, la cuarentena de API y la evaluación
 del mapeo externo siguen pendientes.
-
-## Informes y cuarentena de API
-
-check_api_extraction.py evalúa una extracción conservada y genera
-report.json en una carpeta nueva, fuera de la entrada.
-
-El informe registra procedencia, conteos, reconciliación,
-disponibilidad de tasas, errores y archivos de cuarentena.
-
-completed_for_scope indica evaluación terminada, aunque existan rechazos.
-blocked indica que la extracción no superó los controles previos;
-en ese caso no se declaran registros procesados.
-
-Solo se genera cuarentena Parquet cuando existen registros rechazados.
-Cada fila conserva la respuesta original completa, su SHA-256,
-la posición del registro mediante JSON Pointer, clave, motivos,
-identificadores y fecha UTC de evaluación.
-
-Las extracciones reales de M5 generaron informes sin rechazos:
-38 productos de DummyJSON y 195 observaciones de BCRPData,
-con 184 tasas disponibles y 11 no disponibles.
-
-test_api_reports.py comprueba:
-
-- Producto inválido: 37 aceptados y uno rechazado, con evidencia íntegra.
-- Hash incorrecto: extracción bloqueada, sin cuarentena de registros.
-
-La suite conjunta superó veinte pruebas.
-Los informes permanecen locales; su publicación en Azure está pendiente.
 
 ## Informes y cuarentena de API
 
@@ -316,7 +286,7 @@ Comprueba encabezados, identificadores positivos, referencias existentes,
 unicidad por producto local y externo, tipo de asociación y nota educativa.
 
 El catálogo externo debe superar la evaluación de DummyJSON.
-La referencia local utiliza el conjunto inicial con hashes verificados.
+La referencia local se obtiene directamente de los cinco CSV iniciales.
 
 El archivo real contiene seis asociaciones válidas.
 No se exige cobertura de todos los productos locales.

@@ -206,7 +206,8 @@ compartidos para continuar los siguientes módulos.
 - Los conteos iguales no garantizan valores iguales.
 - Bronze conserva la procedencia y permite reprocesar los datos.
 - Los hashes comprueban integridad; no sustituyen reglas de negocio.
-- Un manifiesto publicado al final identifica una entrega completa.
+- El flujo histórico utilizó manifiestos; el actual exige revisar
+  todos los archivos esperados y el informe de ejecución.
 - Los datos originales y sus metadatos tienen estructuras diferentes.
 - Un valor no disponible no equivale a una tasa de cero.
 - La ingesta de eventos y su aplicación son etapas distintas.

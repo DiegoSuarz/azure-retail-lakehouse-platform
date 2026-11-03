@@ -15,7 +15,8 @@ permisos de escritura y lectura en bronze y acceso de red autorizado.
 
     python ingestion/synthetic/validate_batches.py
 
-Comprueba identidad, versión, inventario, conteos y hashes.
+Comprueba estructura y archivos admitidos; calcula conteos y hashes
+para comparar la preparación temporal.
 Complementa las validaciones de negocio de tests/generators.
 
 ## Preparación
@@ -35,7 +36,7 @@ La publicación posterior genera otro ingestion_run_id.
 El informe no debe existir.
 Los cuatro lotes comparten un UUID de ingesta.
 
-Los datos se suben y verifican antes de publicar el manifiesto original.
+Se suben únicamente los archivos de datos; no se publica un manifiesto.
 Todos los archivos se descargan y verifican mediante SHA-256.
 La publicación impide sobrescribir objetos existentes.
 
@@ -48,17 +49,17 @@ Un fallo detiene el proceso y se registra en el informe.
 No se eliminan automáticamente los archivos publicados.
 
 Revisar el informe antes de repetir una ejecución.
-Un lote sin manifiesto está incompleto.
-Un manifiesto publicado puede existir aunque su comprobación posterior
-haya fallado; revisar ese caso antes de aceptar el lote.
+La aceptación exige revisar el informe y todos los archivos esperados.
+La publicación no es atómica: una carpeta puede contener solo una parte
+de la entrega si la ejecución falla.
 
-## Pruebas realizadas
+## Pruebas históricas realizadas
 
 - Preparación de los cuatro lotes: satisfactoria.
 - Archivo alterado en una copia temporal: rechazado por hash.
 - Caso alterado: ninguna llamada a Azure CLI ni informe de publicación.
 
-## Evidencia de publicación
+## Evidencia histórica de publicación
 
 Ingestion_run_id: 1c55b98a-9a92-4637-b4fe-a3528ae92565.
 
@@ -81,3 +82,15 @@ Los datos y el informe permanecen fuera de Git.
 
 Cuatro lotes funcionales publicados y verificados.
 Procesamiento de eventos en Silver pendiente.
+
+## Flujo actual comprobado sin manifiestos
+
+Los generadores crean tres archivos en batch_001 y un JSONL en cada
+lote adicional: seis archivos de datos en total.
+La preparación local de los cuatro lotes y las simulaciones S08–S12
+se comprobaron sin publicar en Azure.
+
+La tabla histórica anterior incluye cuatro manifiestos; sus cifras
+no describen una publicación nueva bajo el contrato actual.
+Las entradas antiguas requieren copias compatibles sin manifest.json.
+No modificar ni mezclar entregas mientras se preparan o procesan.

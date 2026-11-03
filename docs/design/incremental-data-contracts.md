@@ -29,36 +29,42 @@ Archivos admitidos:
 
 - orders.csv y order_items.csv: nuevos pedidos y sus líneas.
 - changes.jsonl: cambios de registros existentes.
-- manifest.json: descripción y controles del lote.
 
 Un lote puede contener solo CSV, solo eventos o ambos.
 Si contiene orders.csv, debe contener también order_items.csv.
 
-Los archivos de datos serán inmutables una vez publicado el manifiesto.
-El manifiesto se publicará al final, cuando el lote esté completo.
+Los archivos serán inmutables durante su preparación y procesamiento.
+No se genera ni publica un manifiesto por lote.
 
 batch_id identifica el lote, no sustituye las claves de los registros
 ni event_id.
 
-## Manifiesto
+## Identificación y aceptación del lote
 
-Campos obligatorios:
+batch_id se obtiene del nombre de la carpeta local.
+La ruta Bronze utiliza batch_id=<batch_id> y un identificador de ingesta
+separado. Los consumidores reciben la carpeta concreta de datos.
 
-| Campo | Tipo | Significado |
-|---|---|---|
-| schema_version | Entero | Versión del contrato, inicialmente 1 |
-| batch_id | Cadena | Identificador único del lote |
-| created_at | Fecha UTC | Momento de publicación del lote |
-| files | Objeto | Archivos presentes, conteos y hashes SHA-256 |
+El lector comprueba nombres admitidos, archivos regulares, UTF-8,
+encabezados CSV, estructura de filas y objetos JSON por línea.
+Pedidos y líneas deben entregarse juntos.
 
-Cada entrada de files incluirá row_count y sha256.
-row_count excluirá el encabezado CSV y contará eventos en JSONL.
+read_batch permite exigir identidad y conjunto de archivos esperados.
+Sin un conjunto esperado explícito, no puede detectar la ausencia
+de un grupo opcional completo. Una carpeta existente no acredita
+por sí sola una entrega completa.
 
-No se procesará el lote si falta un archivo declarado, cambia un hash
-o no coincide un conteo. No se publicarán pedidos de un lote incompleto.
+Los conteos se calculan desde los bytes leídos.
+No se contrastan con conteos ni hashes declarados en un manifiesto.
+Los evaluadores utilizan los mismos bytes validados en cada lectura.
 
-Un batch_id repetido con el mismo contenido será un reproceso.
-El mismo batch_id con contenido diferente será un conflicto.
+La preparación de ingesta compara hashes antes y después de copiar
+los datos a una carpeta temporal. Tras publicar, descarga y verifica
+cada archivo. Los resultados se conservan en el informe de ejecución.
+
+Un batch_id repetido con el mismo contenido se considera un reproceso
+en las simulaciones. Detectar conflictos entre ejecuciones reales
+requiere un registro persistente; no lo implementa el lector de transporte.
 
 ## CSV de nuevos pedidos
 
@@ -215,7 +221,7 @@ su contribución de las métricas de ventas confirmadas.
 
 ## Validaciones previstas
 
-1. Integridad del manifiesto y de los archivos.
+1. Identidad, archivos requeridos y estructura de la entrega.
 2. Columnas y campos obligatorios.
 3. Tipos, formatos y versión del contrato.
 4. Unicidad de claves y eventos.
@@ -229,8 +235,8 @@ su contribución de las métricas de ventas confirmadas.
 ## Ejemplos de formato
 
 Estos ejemplos ilustran la estructura del contrato.
-No constituyen un lote listo para procesar: no incluyen manifiesto
-y sus referencias deben validarse contra los datos aceptados.
+No constituyen por sí solos una entrega aceptada.
+Sus referencias y reglas deben validarse contra los datos aceptados.
 
 ### orders.csv
 
@@ -268,5 +274,6 @@ Reprocesar el mismo evento no debe duplicar su efecto.
 ## Estado
 
 Contrato definido en M2.4.
-La generación de lotes y su procesamiento todavía no están implementados.
-Los escenarios de cambios y el corte se concretarán en M2.6.
+Generación, validación y preparación local sin manifiestos comprobadas.
+Los evaluadores clasifican datos contra referencias fijas.
+La aplicación persistente de eventos tiene su propio alcance.

@@ -44,7 +44,7 @@ si aparecen problemas de acceso desde el equipo local.
 | gold | Modelo dimensional y resultados analíticos en Delta |
 | quarantine | Registros rechazados y motivos |
 | serving | Publicaciones Parquet para consumo |
-| operations | Manifiestos, auditoría y controles de ejecución |
+| operations | Informes, auditoría y controles de ejecución |
 
 Los seis contenedores se verificaron en Azure Portal con acceso
 Private y estado Available.

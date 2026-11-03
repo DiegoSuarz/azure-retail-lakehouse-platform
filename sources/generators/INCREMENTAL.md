@@ -46,7 +46,8 @@ Las comprobaciones cubren:
 - Simulación de reprocesos, duplicados y secuencias pendientes.
 - Anomalías previstas de los ocho casos inválidos.
 
-S18 contiene un hash deliberadamente incorrecto.
+S18 contiene JSONL deliberadamente mal formado.
+El transporte lo bloquea con DQ004 antes de evaluar reglas de negocio.
 
 S19 reutiliza un pedido inicial con contenido diferente y conserva
 su fecha original, anterior al corte. No es un caso de una única

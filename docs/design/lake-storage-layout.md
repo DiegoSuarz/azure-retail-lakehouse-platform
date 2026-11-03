@@ -63,11 +63,9 @@ Los manifiestos de ejecuciones históricas se conservan como evidencia.
 
     synthetic/incremental/batch_id=<batch_id>/run_id=<ingestion_run_id>/
 
-Se conservarán orders.csv, order_items.csv, changes.jsonl
-y manifest.json cuando estén presentes en el lote.
-
-El manifiesto original mantendrá los nombres y hashes
-de los archivos de origen.
+Se conservarán orders.csv y order_items.csv juntos,
+changes.jsonl o ambos grupos. No se publican manifiestos nuevos.
+Los informes de ingesta registran los archivos y su verificación.
 
 Los casos inválidos S13–S20 solo se cargarán en ejecuciones de prueba
 explícitas; no se mezclarán con la ingesta funcional ordinaria.
@@ -165,8 +163,9 @@ se distinguirán de los registros rechazados.
 Cada publicación contendrá exportaciones Parquet validadas.
 Sus archivos no se mezclarán con los de otra publicación.
 
-Un manifiesto de publicación registrará datasets, conteos,
-controles y versiones de las tablas Gold utilizadas.
+La selección de datasets y versiones Gold será explícita.
+La implementación de Serving definirá su informe de ejecución,
+sin introducir un manifiesto como requisito de configuración.
 
 Synapse consultará únicamente la publicación seleccionada.
 La selección se implementará en el módulo de consumo,
