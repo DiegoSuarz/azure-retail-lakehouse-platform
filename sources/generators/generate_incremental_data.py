@@ -27,26 +27,29 @@ def write_json(path, value):
 
 
 def read_initial(directory):
-    manifest = json.loads(
-        (directory / "manifest.json").read_text(encoding="utf-8")
-    )
-    if manifest["cutoff_exclusive"] != timestamp(CUTOFF):
-        raise ValueError("El corte inicial no coincide con el contrato.")
+    expected_files = {f"{table}.csv" for table in TABLES}
+    if {path.name for path in directory.glob("*.csv")} != expected_files:
+        raise ValueError("Conjunto inicial CSV incompatible.")
+    files = {}
 
     datasets = {}
     for table in TABLES:
         filename = f"{table}.csv"
         path = directory / filename
-        expected = manifest["files"][filename]
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        if digest != expected["sha256"]:
-            raise ValueError(f"Hash inicial incorrecto: {filename}")
-
+        payload = path.read_bytes()
         with path.open(encoding="utf-8", newline="") as stream:
-            rows = list(csv.DictReader(stream))
-
-        if len(rows) != expected["row_count"]:
-            raise ValueError(f"Conteo inicial incorrecto: {filename}")
+            reader = csv.DictReader(stream)
+            rows = list(reader)
+        if not reader.fieldnames or not rows:
+            raise ValueError(f"Archivo inicial vacío: {filename}")
+        if len(reader.fieldnames) != len(set(reader.fieldnames)):
+            raise ValueError(f"Cabecera inicial duplicada: {filename}")
+        if any(None in row or any(value is None for value in row.values()) for row in rows):
+            raise ValueError(f"Estructura inicial incorrecta: {filename}")
+        files[filename] = {
+            "row_count": len(rows),
+            "sha256": hashlib.sha256(payload).hexdigest(),
+        }
 
         for row in rows:
             for field in INTEGER_FIELDS.intersection(row):
@@ -58,7 +61,33 @@ def read_initial(directory):
 
         datasets[table] = rows
 
-    return datasets, manifest
+    status_counts = {}
+    for order in datasets["orders"]:
+        status = order["status"]
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    confirmed_ids = {
+        row["order_id"] for row in datasets["orders"]
+        if row["status"] == "confirmed"
+    }
+    confirmed_net = Decimal("0")
+    confirmed_quantity = 0
+    for row in datasets["order_items"]:
+        if row["order_id"] in confirmed_ids:
+            confirmed_net += (
+                row["quantity"] * Decimal(row["unit_price"])
+                - Decimal(row["discount_amount"])
+            )
+            confirmed_quantity += row["quantity"]
+
+    return datasets, {
+        "files": files,
+        "controls": {
+            "order_status_counts": status_counts,
+            "net_amount_confirmed_orders": money(confirmed_net),
+            "quantity_confirmed_orders": confirmed_quantity,
+        },
+    }
 
 
 def make_event(scenario, entity, original, changes, hour, sequence=1):
@@ -98,7 +127,7 @@ def order_measures(items, order_id):
     return net, sum(row["quantity"] for row in lines)
 
 
-def build_functional(datasets, initial_manifest):
+def build_functional(datasets, initial_reference):
     customer = min(datasets["customers"], key=lambda row: row["customer_id"])
     products = sorted(datasets["products"], key=lambda row: row["product_id"])
     product, inactive_product = products[:2]
@@ -173,13 +202,13 @@ def build_functional(datasets, initial_manifest):
     new_quantity = sum(value[1] for value in new_measures)
     net_delta = new_net + pending_net - cancelled_net
     quantity_delta = new_quantity + pending_quantity - cancelled_quantity
-    controls = initial_manifest["controls"]
+    controls = initial_reference["controls"]
 
     expectations = {
         "schema_version": 1,
         "covered_scenarios": ["S01", "S02", "S03", "S04", "S05", "S06", "S07"],
         "delivery_order": ["functional/batch_001"],
-        "baseline_files": initial_manifest["files"],
+        "baseline_files": initial_reference["files"],
         "new_order_ids": [row["order_id"] for row in orders],
         "new_order_count": len(orders),
         "new_line_count": len(items),
@@ -224,8 +253,10 @@ def main():
     if args.output_dir.exists() and any(args.output_dir.iterdir()):
         parser.error("La carpeta de salida no está vacía. Usa otra ubicación.")
 
-    datasets, manifest = read_initial(args.initial_dir)
-    orders, items, events, expectations = build_functional(datasets, manifest)
+    datasets, initial_reference = read_initial(args.initial_dir)
+    orders, items, events, expectations = build_functional(
+        datasets, initial_reference
+    )
 
     batch_dir = args.output_dir / "functional" / "batch_001"
     batch_dir.mkdir(parents=True, exist_ok=True)

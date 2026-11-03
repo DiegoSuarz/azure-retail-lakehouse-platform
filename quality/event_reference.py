@@ -75,10 +75,17 @@ def after_batch_001_context():
     expectations = json.loads(
         (ROOT / "data/incremental/expectations.json").read_text(encoding="utf-8")
     )
-    initial_manifest = json.loads(
-        (ROOT / "data/initial/manifest.json").read_text(encoding="utf-8")
-    )
-    if expectations["baseline_files"] != initial_manifest["files"]:
+    initial = load_initial_reference()
+    baseline_files = {
+        f"{name}.csv": {
+            "row_count": len(rows),
+            "sha256": hashlib.sha256(
+                (ROOT / "data/initial" / f"{name}.csv").read_bytes()
+            ).hexdigest(),
+        }
+        for name, rows in initial.items()
+    }
+    if expectations["baseline_files"] != baseline_files:
         raise RuntimeError("Las expectativas corresponden a otra referencia")
 
     evaluation = evaluate_new_orders(directory, load_initial_reference())
