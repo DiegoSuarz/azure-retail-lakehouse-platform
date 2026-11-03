@@ -7,15 +7,10 @@ from quality.api_extraction_input import ExtractionError, parse_json, require
 from quality.api_record_rules import CATEGORIES, evaluate_product
 
 
-def evaluate_dummyjson(manifest, responses, payloads):
+def evaluate_dummyjson(extraction, responses, payloads):
     require(
-        manifest.get("source_system") == "dummyjson",
+        extraction.get("source_system") == "dummyjson",
         "DQ014", "Fuente incompatible",
-    )
-    summaries = manifest.get("categories")
-    require(
-        isinstance(summaries, dict) and set(summaries) == CATEGORIES,
-        "DQ014", "Categorías del manifiesto incompatibles",
     )
     available = responses.get("categories.json")
     require(
@@ -24,12 +19,6 @@ def evaluate_dummyjson(manifest, responses, payloads):
         "DQ014", "Lista de categorías incompatible",
     )
     require(CATEGORIES <= set(available), "DQ014", "Faltan categorías previstas")
-    require(
-        type(manifest["files"]["categories.json"].get("row_count")) is int
-        and manifest["files"]["categories.json"]["row_count"] == len(available),
-        "DQ003", "Conteo de categorías diferente",
-    )
-
     records = []
     seen = set()
     expected_files = {"categories.json"}
@@ -103,13 +92,6 @@ def evaluate_dummyjson(manifest, responses, payloads):
                 bool(products) or offset == total == 0,
                 "DQ014", f"Página vacía inesperada: {name}",
             )
-            metadata = manifest["files"][name]
-            require(
-                type(metadata.get("row_count")) is int
-                and metadata["row_count"] == len(products),
-                "DQ003", f"Conteo diferente: {name}",
-            )
-
             for position, product in enumerate(products, 1):
                 result = evaluate_product(product, category)
                 identifier = product.get("id") if isinstance(product, dict) else None
@@ -134,23 +116,9 @@ def evaluate_dummyjson(manifest, responses, payloads):
             )
 
         require(offset == expected_total, "DQ014", f"Extracción incompleta: {category}")
-        summary = summaries[category]
-        require(
-            isinstance(summary, dict)
-            and type(summary.get("product_count")) is int
-            and type(summary.get("page_count")) is int
-            and summary["product_count"] == offset
-            and summary["page_count"] == len(pages),
-            "DQ017", f"Resumen diferente: {category}",
-        )
 
     require(
         set(responses) == expected_files,
         "DQ014", "Respuestas adicionales o incompatibles",
-    )
-    require(
-        type(manifest.get("unique_product_count")) is int
-        and manifest["unique_product_count"] == len(seen),
-        "DQ017", "Conteo de identificadores únicos diferente",
     )
     return records

@@ -137,11 +137,11 @@ def main():
     try:
         payload = mapping_path.read_bytes()
         report["mapping_sha256"] = hashlib.sha256(payload).hexdigest()
-        manifest, responses, payloads = read_extraction(reference_dir)
-        products = evaluate_dummyjson(manifest, responses, payloads)
+        extraction, responses, payloads = read_extraction(reference_dir)
+        products = evaluate_dummyjson(extraction, responses, payloads)
         if any(row["status"] != "accepted" for row in products):
             raise ExtractionError("DQ016", "Catálogo externo con registros rechazados")
-        report["dummyjson_ingestion_run_id"] = manifest["ingestion_run_id"]
+        report["dummyjson_ingestion_run_id"] = extraction["ingestion_run_id"]
 
         reference = load_initial_reference()
         local_ids = {int(row["product_id"]) for row in reference["products"]}

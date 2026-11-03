@@ -1,7 +1,6 @@
 """Extrae las categorías tecnológicas de DummyJSON a archivos locales."""
 
 import argparse
-import hashlib
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -43,23 +42,7 @@ def validate_product(product, category):
     return identifier
 
 
-def register_response(files, root, path, metadata, row_count):
-    relative = path.relative_to(root).as_posix()
-    files[relative] = {
-        "row_count": row_count,
-        "sha256": metadata["payload_sha256"],
-        "size_bytes": metadata["size_bytes"],
-        "metadata_file": relative + ".metadata.json",
-    }
-    sidecar = path.with_name(path.name + ".metadata.json")
-    files[relative + ".metadata.json"] = {
-        "sha256": hashlib.sha256(sidecar.read_bytes()).hexdigest(),
-        "size_bytes": sidecar.stat().st_size,
-    }
-
-
 def extract(root, run_id, page_size):
-    files = {}
     summaries = {}
     seen = set()
     categories_path = root / "categories.json"
@@ -73,7 +56,6 @@ def extract(root, run_id, page_size):
         "Respuesta de categorías incompatible",
     )
     require(set(CATEGORIES) <= set(available), "Faltan categorías previstas")
-    register_response(files, root, categories_path, metadata, len(available))
 
     for category in CATEGORIES:
         skip = 0
@@ -122,7 +104,6 @@ def extract(root, run_id, page_size):
                 require(identifier not in seen, f"ID duplicado: {identifier}")
                 seen.add(identifier)
 
-            register_response(files, root, path, metadata, len(products))
             skip += len(products)
             require(skip <= total, "Se recibieron más productos que el total")
             print(f"PASS: {category}, página {page_number}, {len(products)} productos.")
@@ -135,7 +116,7 @@ def extract(root, run_id, page_size):
             "page_count": page_number,
         }
 
-    return files, summaries, len(seen)
+    return summaries, len(seen)
 
 
 def main():
@@ -149,7 +130,6 @@ def main():
         parser.error("--page-size debe estar entre 1 y 100.")
 
     run_id = str(uuid4())
-    started_at = utc_now()
     ingestion_date = datetime.now(timezone.utc).date().isoformat()
     root = (
         args.output_root / "dummyjson" / "products"
@@ -159,20 +139,7 @@ def main():
     print(f"EXTRACCIÓN: {root}")
 
     try:
-        files, summaries, count = extract(root, run_id, args.page_size)
-        write_json(root / "manifest.json", {
-            "schema_version": 1,
-            "source_system": "dummyjson",
-            "ingestion_run_id": run_id,
-            "ingestion_date": ingestion_date,
-            "extraction_started_at": started_at,
-            "extraction_finished_at": utc_now(),
-            "categories": summaries,
-            "unique_product_count": count,
-            "files": files,
-            "status": "completed",
-            "consistency_limitation": "La API no ofrece una instantánea transaccional.",
-        })
+        summaries, count = extract(root, run_id, args.page_size)
     except BaseException as error:
         write_json(root / "failure.json", {
             "status": "failed",
@@ -184,7 +151,7 @@ def main():
         raise
 
     print(f"COMPLETADO: {count} productos únicos de cuatro categorías.")
-    print(f"MANIFIESTO: {root / 'manifest.json'}")
+    print(f"RESPUESTAS Y METADATOS: {root}")
     print("ALCANCE: extracción local; publicación en Bronze pendiente.")
 
 

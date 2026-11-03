@@ -40,35 +40,32 @@ def observation_date(text, start, end):
     return observed
 
 
-def evaluate_bcrpdata(manifest, responses, payloads):
+def evaluate_bcrpdata(extraction, responses, payloads):
     require(
-        manifest.get("source_system") == "bcrpdata"
-        and manifest.get("series_code") == "PD04638PD",
+        extraction.get("source_system") == "bcrpdata",
         "DQ015", "Fuente o serie incompatible",
     )
     require(
         set(responses) == {"response.json"},
         "DQ015", "Inventario de respuestas incompatible",
     )
-    try:
-        start = date.fromisoformat(manifest["requested_start_date"])
-        end = date.fromisoformat(manifest["requested_end_date"])
-    except (KeyError, TypeError, ValueError) as error:
-        from quality.api_extraction_input import ExtractionError
-        raise ExtractionError("DQ015", "Intervalo solicitado inválido") from error
-    require(start <= end, "DQ015", "Intervalo solicitado invertido")
-
     provenance = parse_json(
         payloads["response.json.metadata.json"], "DQ004", "procedencia"
     )
-    expected_path = (
-        "/estadisticas/series/api/PD04638PD/json/"
-        f"{start.isoformat()}/{end.isoformat()}/esp"
+    request = urlparse(provenance["request_url"])
+    match = re.fullmatch(
+        r"/estadisticas/series/api/PD04638PD/json/"
+        r"(\d{4}-\d{2}-\d{2})/(\d{4}-\d{2}-\d{2})/esp",
+        request.path,
     )
-    require(
-        urlparse(provenance["request_url"]).path == expected_path,
-        "DQ015", "La solicitud no coincide con la serie y el intervalo",
-    )
+    require(match is not None, "DQ015", "Serie o endpoint incompatible")
+    try:
+        start = date.fromisoformat(match.group(1))
+        end = date.fromisoformat(match.group(2))
+    except ValueError as error:
+        from quality.api_extraction_input import ExtractionError
+        raise ExtractionError("DQ015", "Intervalo solicitado inválido") from error
+    require(start <= end, "DQ015", "Intervalo solicitado invertido")
 
     data = responses["response.json"]
     require(isinstance(data, dict), "DQ015", "Respuesta no objeto")
@@ -90,13 +87,6 @@ def evaluate_bcrpdata(manifest, responses, payloads):
         isinstance(periods, list) and bool(periods),
         "DQ015", "Observaciones ausentes",
     )
-    metadata = manifest["files"]["response.json"]
-    require(
-        type(metadata.get("row_count")) is int
-        and metadata["row_count"] == len(periods),
-        "DQ003", "Conteo de observaciones diferente",
-    )
-
     records = []
     seen = set()
     for position, period in enumerate(periods, 1):
@@ -147,28 +137,8 @@ def evaluate_bcrpdata(manifest, responses, payloads):
             "raw_value": rate_result["raw_value"] if rate_result else None,
         })
 
-    # Los controles de la extracción completa se contrastan cuando
-    # todos los registros superan las reglas de estructura y contenido.
     if all(record["status"] == "accepted" for record in records):
         available = sum(record["available"] for record in records)
-        expected = {
-            "source_series_name": name,
-            "observation_count": len(records),
-            "available_count": available,
-            "unavailable_count": len(records) - available,
-            "first_observation_date": min(seen).isoformat(),
-            "last_observation_date": max(seen).isoformat(),
-        }
-        controls = manifest.get("controls")
-        require(isinstance(controls, dict), "DQ017", "Controles ausentes")
-        require(
-            all(
-                controls.get(key) == value
-                and type(controls.get(key)) is type(value)
-                for key, value in expected.items()
-            ),
-            "DQ017", "Controles diferentes del manifiesto",
-        )
         require(available > 0, "DQ015", "Sin tasas numéricas disponibles")
 
     return records
