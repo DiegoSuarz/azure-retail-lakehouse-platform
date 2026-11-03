@@ -54,11 +54,10 @@ Entidades:
 
 Cada directorio de entidad contendrá los archivos Parquet extraídos.
 
-El directorio de la ejecución contendrá también un manifiesto
-de extracción con corte, entidades, archivos y controles.
-
-El manifiesto cloud de extracción será distinto del manifiesto
-de generación local de M2.
+La extracción inicial no requiere un manifiesto en este directorio.
+La aceptación utiliza el informe local de validación Parquet,
+la revisión manual de ADF y la comparación de archivos cloud/local.
+Los manifiestos de ejecuciones históricas se conservan como evidencia.
 
 ### Lotes sintéticos incrementales
 

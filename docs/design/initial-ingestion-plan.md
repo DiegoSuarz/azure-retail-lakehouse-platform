@@ -104,27 +104,15 @@ Las fechas se compararán por su valor, no por su formato visual.
 La cantidad de filas reportada por Copy se registrará como evidencia,
 pero no sustituirá la lectura y validación de los archivos.
 
-## Manifiesto de extracción
+## Evidencia de aceptación
 
-Se generará manifest.json en la raíz de la ejecución.
+No se requiere un manifiesto de extracción.
+Se conserva el informe del validador Parquet y la evidencia de revisión
+manual de estados, fechas, consistencia y métricas de ADF.
+También se comprueba la igualdad de los archivos cloud y los validados.
 
-Registrará:
-
-- Versión del formato del manifiesto.
-- ingestion_run_id.
-- Sistema de origen y base de datos.
-- Corte del conjunto sintético.
-- Inicio y fin de extracción en UTC.
-- Método utilizado para mantener la consistencia.
-- Entidades, archivos, tamaños y hashes SHA-256.
-- Conteos de origen, copia y destino.
-- Resultados de reconciliación.
-- Estado de finalización.
-
-Será distinto del manifiesto de generación local de M2.
-
-La especificación exacta y el mecanismo de generación se concretarán
-antes de ejecutar la carga completa.
+El procedimiento está en
+[Aceptación de extracción inicial](initial-extraction-manifest.md).
 
 ## Fallos y finalización
 
@@ -156,5 +144,6 @@ Datasets y pipeline publicados en ADF.
 Referencia local del origen capturada y controles de M2 verificados.
 Carga inicial ejecutada y validada contra las referencias del origen.
 Los cinco Parquet cloud coinciden byte por byte con los validados.
-Manifiesto publicado en Bronze y verificado contra la copia local.
+La ejecución histórica publicó y verificó un manifiesto en Bronze.
+El flujo actual prescinde de su generación y publicación.
 Ejecución aceptada: 89d277f4-ddee-49a2-9d9f-588efacf9788.

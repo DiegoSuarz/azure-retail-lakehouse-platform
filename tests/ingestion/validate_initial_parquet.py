@@ -195,7 +195,7 @@ def main():
         json.dump(report, stream, ensure_ascii=False, indent=2)
         stream.write("\n")
     print(f"GUARDADO: {args.report}")
-    print("ALCANCE: validación local; manifiesto cloud todavía pendiente.")
+    print("ALCANCE: validación local; revisión ADF y comparación cloud/local separadas.")
 
 
 if __name__ == "__main__":

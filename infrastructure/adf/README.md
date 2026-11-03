@@ -100,9 +100,12 @@ Copy conserva la verificación de consistencia habilitada,
 sin staging, sin truncamiento permitido y con cero reintentos.
 El timeout de la actividad es de diez minutos.
 
-La aceptación de los Parquet y la publicación del manifiesto
+La aceptación histórica de los Parquet y publicación del manifiesto
 se realizaron mediante scripts locales y Azure CLI.
-Estas operaciones todavía no forman parte del pipeline exportado.
+
+El flujo actual conserva la validación Parquet y prescinde del manifiesto.
+La aceptación exige revisión manual de ADF y comparación cloud/local.
+Estas comprobaciones no forman parte del pipeline exportado.
 
 Las ingestas sintéticas y de API también se ejecutaron con scripts.
 No están incluidas como pipelines en estas plantillas.
