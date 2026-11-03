@@ -2,7 +2,6 @@
 
 import argparse
 import csv
-import hashlib
 import json
 import random
 from datetime import datetime, timedelta, timezone
@@ -45,7 +44,6 @@ def write_csv(path, rows):
         writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def generate(seed):
@@ -186,29 +184,13 @@ def main():
     datasets, controls = generate(args.seed)
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    files = {}
     for name, rows in datasets.items():
-        filename = f"{name}.csv"
-        digest = write_csv(args.output_dir / filename, rows)
-        files[filename] = {"row_count": len(rows), "sha256": digest}
+        write_csv(args.output_dir / f"{name}.csv", rows)
+        print(f"PASS: {name}, {len(rows)} filas.")
+    print(f"Semilla: {args.seed}")
+    print(f"Período: {timestamp(START)} <= fecha < {timestamp(CUTOFF)}")
+    print(json.dumps(controls, ensure_ascii=False, indent=2))
 
-    manifest = {
-        "generator_version": 1,
-        "seed": args.seed,
-        "currency": "PEN",
-        "encoding": "utf-8",
-        "delimiter": ",",
-        "timestamp_timezone": "UTC",
-        "period_start_inclusive": timestamp(START),
-        "cutoff_exclusive": timestamp(CUTOFF),
-        "files": files,
-        "controls": controls,
-    }
-    (args.output_dir / "manifest.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    print(json.dumps(manifest, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

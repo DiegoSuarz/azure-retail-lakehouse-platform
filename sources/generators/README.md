@@ -47,10 +47,10 @@ generación inicial. Los cambios posteriores se modelarán por separado.
 
 ## Archivos
 
-Se generan cinco CSV y manifest.json.
-
-El manifiesto contiene parámetros, conteos, hashes SHA-256 y totales
-para reconciliar los archivos y la posterior carga en SQL Server.
+Se generan cinco CSV, sin manifiesto.
+El generador muestra la semilla, el período, los conteos y los totales
+en la terminal. El cargador calcula las referencias de reconciliación
+directamente desde los CSV que insertará en SQL Server.
 
 Los archivos generados permanecen excluidos de Git.
 
@@ -58,11 +58,15 @@ Los archivos generados permanecen excluidos de Git.
 
     python tests/generators/validate_initial_data.py
 
-El validador comprueba hashes, conteos, claves, relaciones,
-fechas, reglas comerciales y concordancia con el manifiesto.
+El validador comprueba estructura, conteos, claves, relaciones,
+fechas y reglas comerciales directamente sobre los CSV.
+Permite indicar otra carpeta mediante --data-dir RUTA.
 
-La comparación de dos generaciones con semilla 42 confirmó
-igualdad byte por byte de los seis archivos en Python 3.12.3.
+La prueba del flujo sin manifiesto validó las semillas 42 y 17,
+confirmó igualdad byte por byte de los cinco CSV al repetir la semilla 42
+y comprobó el rechazo de una categoría de producto inexistente.
+
+Ya no se verifica la integridad contra hashes de la generación original.
 
 ## Controles verificados con semilla 42
 

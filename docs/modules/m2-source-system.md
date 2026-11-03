@@ -10,7 +10,7 @@ reproducibles para la carga inicial y los incrementales del Lakehouse.
 - Modelo OLTP de cinco tablas y reglas de negocio.
 - Scripts de creación de base, tablas y permisos.
 - Usuarios retail_loader y retail_reader con permisos diferenciados.
-- Generador inicial, manifiesto y validador.
+- Generador inicial de cinco CSV y validador sin manifiesto.
 - Cargador transaccional con reconciliación previa al COMMIT.
 - Dependencia pyodbc registrada en requirements.txt.
 - Contratos incrementales CSV y JSONL.
@@ -35,8 +35,14 @@ La carga inicial conserva:
 | Importe neto confirmado PEN | 15781257.30 |
 | Unidades confirmadas | 11682 |
 
-Los conteos e importes fueron reconciliados con el manifiesto
-y mediante consultas independientes en SQL Server.
+En la carga histórica, los conteos e importes fueron reconciliados
+con el manifiesto utilizado entonces y mediante consultas independientes
+en SQL Server.
+
+El flujo inicial actual prescinde del manifiesto. El generador y el
+validador se probaron en carpetas temporales; el cargador calcula sus
+referencias desde los CSV y tiene pendiente la prueba real en SQL Server.
+Los contratos incrementales se revisan por separado.
 
 Se comprobó igualdad byte por byte entre generaciones repetidas
 del conjunto inicial y del conjunto incremental completo.
