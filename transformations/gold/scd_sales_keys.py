@@ -93,3 +93,110 @@ def resolve_sales_scd_key(sales, dimension, dimension_name):
         )
 
     return resolved
+
+
+def validate_legacy_sales(
+    sales, accepted_sales, accepted_dimensions, dimensions
+):
+    """Verifica ventas M9 intactas y sus referencias, sin exigir vigencias."""
+    for label, frame in (("ventas", sales), ("base M9", accepted_sales)):
+        if len(frame.columns) != len(set(frame.columns)):
+            raise ValueError(f"Columnas duplicadas en {label}.")
+
+    expected_schema = [
+        (field.name, field.dataType) for field in accepted_sales.schema
+    ]
+    actual_schema = [
+        (field.name, field.dataType) for field in sales.schema
+    ]
+    if actual_schema != expected_schema:
+        raise ValueError("El esquema de ventas difiere de la base M9.")
+
+    required = {
+        "order_id": T.IntegerType(),
+        "line_number": T.IntegerType(),
+        "product_key": T.LongType(),
+        "customer_key": T.LongType(),
+    }
+    for name, expected in required.items():
+        if name not in sales.columns or sales.schema[name].dataType != expected:
+            raise ValueError(f"Columna de ventas ausente o incompatible: {name}")
+
+    invalid_keys = [
+        F.col(name).isNull() | (F.col(name) <= 0)
+        for name in required
+    ]
+    if sales.filter(reduce(or_, invalid_keys)).limit(1).count():
+        raise ValueError("Las ventas heredadas contienen claves inválidas.")
+
+    grain = ("order_id", "line_number")
+    if sales.groupBy(*grain).count().filter("count > 1").limit(1).count():
+        raise ValueError("Las ventas heredadas contienen líneas duplicadas.")
+
+    if (
+        sales.exceptAll(accepted_sales).limit(1).count()
+        or accepted_sales.exceptAll(sales).limit(1).count()
+    ):
+        raise ValueError("Los datos de ventas difieren de la base M9.")
+
+    relationships = {}
+    for name in ("dim_product", "dim_customer"):
+        rules = SCD_RULES[name]
+        version_key = rules["version_key"]
+        business_key = rules["business_key"]
+
+        if name not in accepted_dimensions or name not in dimensions:
+            raise ValueError(f"Falta una dimensión para validar: {name}")
+
+        baseline = accepted_dimensions[name]
+        dimension = dimensions[name]
+        for label, frame in (("base M9", baseline), ("SCD", dimension)):
+            if len(frame.columns) != len(set(frame.columns)):
+                raise ValueError(f"Columnas duplicadas en {name}, {label}.")
+            for column, expected in (
+                (version_key, T.LongType()),
+                (business_key, T.IntegerType()),
+            ):
+                if column not in frame.columns or frame.schema[column].dataType != expected:
+                    raise ValueError(f"Clave incompatible en {name}, {label}: {column}")
+
+        referenced = sales.select(version_key).distinct()
+        for label, frame in (("base M9", baseline), ("SCD", dimension)):
+            matches = referenced.join(
+                frame.select(version_key, business_key),
+                version_key,
+                "left",
+            )
+            counts = matches.groupBy(version_key).agg(
+                F.count(F.lit(1)).alias("result_rows"),
+                F.count(business_key).alias("matched_entities"),
+            )
+            if counts.filter(
+                (F.col("result_rows") != 1)
+                | (F.col("matched_entities") != 1)
+            ).limit(1).count():
+                raise ValueError(f"Referencia ausente, duplicada o nula: {name}, {label}")
+
+        expected_mapping = referenced.join(
+            baseline.select(version_key, business_key),
+            version_key,
+            "inner",
+        )
+        if expected_mapping.join(
+            dimension.select(version_key, business_key),
+            [version_key, business_key],
+            "left_anti",
+        ).limit(1).count():
+            raise ValueError(f"Una clave heredada identifica otra entidad: {name}")
+
+        relationships[name] = {
+            "references_verified": True,
+            "entity_mapping_preserved": True,
+        }
+
+    return {
+        "passed": True,
+        "row_count": sales.count(),
+        "sales_unchanged": True,
+        "relationships": relationships,
+    }
