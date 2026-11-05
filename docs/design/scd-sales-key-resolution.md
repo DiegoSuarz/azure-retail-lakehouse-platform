@@ -85,7 +85,57 @@ Los importes PEN y USD no se recalculan por un cambio dimensional.
 - Conservación de claves de la base M9 aceptada.
 - Conservación del grano y los importes de las ventas.
 
+## Implementación y validaciones
+
+El módulo transformations/gold/scd_sales_keys.py incorpora:
+
+- resolve_sales_scd_key: resuelve una dimensión por línea de venta
+  mediante clave de negocio y vigencia temporal.
+- validate_legacy_sales: compara las ventas con la base M9 aceptada
+  y verifica la conservación de sus referencias dimensionales.
+
+### Resolución temporal
+
+Pruebas sintéticas ejecutadas para productos y clientes:
+
+- Coincidencia con versiones abiertas y cerradas.
+- Selección de la nueva versión exactamente en el límite temporal.
+- Conservación del grano, atributos e importes de las ventas.
+- Rechazo de ventas anteriores al historial o sin entidad dimensional.
+- Rechazo de coincidencias ambiguas por versiones solapadas.
+- Rechazo de líneas duplicadas, fechas nulas y claves ya presentes.
+
+### Ventas heredadas
+
+Pruebas sintéticas ejecutadas:
+
+- Aceptación de referencias a versiones cerradas.
+- Aceptación de ventas anteriores al inicio del historial SCD.
+- Rechazo de alteraciones de datos, líneas faltantes y duplicadas.
+- Rechazo de claves inválidas, referencias ausentes o duplicadas.
+- Rechazo de claves reutilizadas para otra entidad.
+
+Verificación local ejecutada el 5 de noviembre de 2026:
+
+- Base Gold M9: 815d77ca-1b31-40f4-b3b1-a6eeb9e23aa0.
+- Lote inicial SCD: f8f2f3e2-3121-4008-9959-cda1b0668ebb.
+- Lectura de las tablas involucradas en versión Delta 0.
+- Informes de origen y vínculo SHA-256 comprobados.
+- 5862 líneas con referencias verificadas a productos y clientes.
+- Asociación entre claves dimensionales y entidades conservada.
+
+La comprobación local utilizó las ventas M9 originales como conjunto
+de referencia y como conjunto conservado. No existía otra tabla de
+hechos SCD para contrastar. La detección de alteraciones se comprobó
+mediante las pruebas sintéticas.
+
+Los resultados se mostraron en consola.
+Esta verificación no escribió tablas ni generó un informe persistente.
+
 ## Estado
 
-Política definida.
-Implementación y pruebas de resolución temporal pendientes.
+Política implementada y funciones probadas.
+Referencias de las ventas heredadas verificadas contra la base SCD local.
+
+La integración en el ejecutor, la persistencia del flujo completo
+y su ejecución en Azure permanecen pendientes.
