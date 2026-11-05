@@ -157,3 +157,89 @@ def prepare_version_closures(
         else F.col(f"stored.{name}")
         for name in dimension.columns
     ])
+
+
+def prepare_new_versions(
+    changes, plan, dimension, dimension_name,
+    batch_id, run_id, observed_at, processed_at,
+):
+    """Construye nuevas filas desde cambios y un plan de claves validados."""
+    from datetime import datetime, timezone
+
+    if dimension_name not in SCD_RULES:
+        raise ValueError("Dimensión no admitida para construir versiones.")
+
+    for name, value in (("batch_id", batch_id), ("run_id", run_id)):
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"Se requiere {name} no vacío.")
+
+    instants = {}
+    for name, value in (
+        ("observed_at", observed_at),
+        ("processed_at", processed_at),
+    ):
+        if (
+            not isinstance(value, datetime)
+            or value.tzinfo is None
+            or value.utcoffset() is None
+        ):
+            raise ValueError(f"{name} debe incluir zona horaria.")
+        instants[name] = value.astimezone(timezone.utc)
+
+    observed_at = instants["observed_at"]
+    processed_at = instants["processed_at"]
+    if processed_at < observed_at:
+        raise ValueError("El procesamiento no puede preceder a la observación.")
+
+    if dimension.sparkSession.conf.get("spark.sql.session.timeZone") != "UTC":
+        raise ValueError("La sesión Spark debe utilizar UTC.")
+
+    rules = SCD_RULES[dimension_name]
+    business_key = rules["business_key"]
+    version_key = rules["version_key"]
+    attributes = rules["stable"] + rules["type1"] + rules["type2"]
+
+    candidates = changes.filter(
+        F.col("change_type").isin("new", "type2", "type1_and_type2")
+    ).select(business_key, *attributes)
+
+    assigned = candidates.join(
+        plan.select(business_key, "new_version_key"),
+        business_key,
+        "left",
+    )
+    if assigned.filter(
+        F.col("new_version_key").isNull()
+    ).limit(1).count():
+        raise ValueError("Existe una nueva versión sin clave asignada.")
+
+    values = {
+        name: F.col(name)
+        for name in (business_key,) + attributes
+    }
+    values.update({
+        version_key: F.col("new_version_key"),
+        "valid_from": F.lit(observed_at),
+        "valid_to": F.lit(None).cast("timestamp"),
+        "is_current": F.lit(True),
+        "gold_processing_run_id": F.lit(run_id),
+        "gold_processed_at": F.lit(processed_at),
+        "scd_created_batch_id": F.lit(batch_id),
+        "scd_last_modified_batch_id": F.lit(batch_id),
+        "scd_last_modified_run_id": F.lit(run_id),
+        "scd_last_modified_at": F.lit(processed_at),
+    })
+
+    if set(dimension.columns) != set(values):
+        raise ValueError("Las columnas dimensionales no coinciden con el contrato.")
+
+    result = assigned.select(*[
+        values[name].alias(name)
+        for name in dimension.columns
+    ])
+    expected_types = [field.dataType for field in dimension.schema]
+    actual_types = [field.dataType for field in result.schema]
+    if actual_types != expected_types:
+        raise ValueError("Los tipos de las nuevas versiones son incompatibles.")
+
+    return result
