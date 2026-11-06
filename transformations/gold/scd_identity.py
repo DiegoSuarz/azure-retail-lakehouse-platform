@@ -69,3 +69,81 @@ def fingerprint_scd_input(incoming, dimension_name):
         "row_count": row_count,
         "columns": header["columns"],
     }
+
+
+def build_scd_batch_identity(
+    incoming, dimension_name, batch_id, observed_at,
+    source_references, rules_version,
+):
+    """Construye una identidad estable del lote, independiente del intento."""
+    from datetime import datetime, timezone
+
+    expected_sources = {
+        "dim_product": {"products", "categories"},
+        "dim_customer": {"customers"},
+    }
+    if dimension_name not in expected_sources:
+        raise ValueError("Dimensión no admitida para identificar el lote.")
+
+    for name, value in (
+        ("batch_id", batch_id),
+        ("rules_version", rules_version),
+    ):
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"Se requiere {name} no vacío.")
+
+    if (
+        not isinstance(observed_at, datetime)
+        or observed_at.tzinfo is None
+        or observed_at.utcoffset() is None
+    ):
+        raise ValueError("observed_at debe incluir zona horaria.")
+
+    observed_utc = observed_at.astimezone(timezone.utc).isoformat(
+        timespec="microseconds"
+    )
+
+    if (
+        not isinstance(source_references, dict)
+        or set(source_references) != expected_sources[dimension_name]
+    ):
+        raise ValueError("Las referencias de origen no corresponden a la dimensión.")
+
+    references = {}
+    for name, specification in source_references.items():
+        if (
+            not isinstance(specification, dict)
+            or set(specification) != {"path", "version"}
+        ):
+            raise ValueError(f"Referencia incompatible: {name}")
+
+        path = specification["path"]
+        version = specification["version"]
+        if not isinstance(path, str) or not path.strip():
+            raise ValueError(f"Ruta de origen inválida: {name}")
+        if type(version) is not int or version < 0:
+            raise ValueError(f"Versión Delta inválida: {name}")
+
+        references[name] = {"path": path, "version": version}
+
+    payload = {
+        "identity_format_version": 1,
+        "batch_id": batch_id,
+        "dimension": dimension_name,
+        "observed_at": observed_utc,
+        "sources": references,
+        "input": fingerprint_scd_input(incoming, dimension_name),
+        "rules_version": rules_version,
+        "rules": SCD_RULES[dimension_name],
+    }
+    serialized = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+    return {
+        "sha256": hashlib.sha256(serialized.encode("utf-8")).hexdigest(),
+        "payload": json.loads(serialized),
+    }
