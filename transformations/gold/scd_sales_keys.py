@@ -6,7 +6,7 @@ from operator import or_
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
 
-from transformations.gold.scd_rules import SCD_RULES
+from transformations.gold.scd_transform import SCD_RULES
 
 
 def resolve_sales_scd_key(sales, dimension, dimension_name):

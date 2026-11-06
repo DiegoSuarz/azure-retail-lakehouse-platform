@@ -6,7 +6,7 @@ import json
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
 
-from transformations.gold.scd_rules import SCD_RULES
+from transformations.gold.scd_transform import SCD_RULES
 
 
 def fingerprint_scd_input(incoming, dimension_name):
