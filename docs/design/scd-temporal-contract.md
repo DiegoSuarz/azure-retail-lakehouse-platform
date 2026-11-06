@@ -31,7 +31,7 @@ Cada lote SCD debe identificar:
 - observed_at explícito en UTC.
 - Rutas y versiones Delta de las entradas Silver utilizadas.
 - Estado completo de los atributos requeridos por entidad.
-- Huella del contenido y metadatos que permita reconocer reintentos.
+- Ruta y versión Delta de partida de la dimensión de destino.
 
 Productos requiere referencias de products y categories.
 Clientes requiere referencia de customers.
@@ -44,9 +44,9 @@ observed_at corresponde a la preparación de la observación
 sobre ese conjunto aceptado. No se genera de nuevo al reintentar
 ni se deriva del timestamp de commit de una sola entrada Delta.
 
-Un mismo batch_id con contenido o referencias diferentes se rechaza.
-La implementación de huellas y control persistente se desarrollará
-en los micromódulos de idempotencia y recuperación.
+El flujo simplificado no mantiene huellas ni un registro persistente de lotes.
+batch_id se utiliza como dato de auditoría; no garantiza por sí solo
+el reconocimiento de reintentos ni detecta su reutilización con otros datos.
 
 ## Semántica de fechas
 
@@ -86,18 +86,26 @@ Los cambios tipo 1 no modifican períodos de vigencia.
 
 ## Orden y cambios atrasados
 
-Se aplicarán lotes secuencialmente, sin escritores simultáneos.
-Cada lote nuevo debe tener observed_at estrictamente posterior
-al último lote aceptado para esa dimensión, incluso si este no creó versiones.
+Se aplican lotes secuencialmente, con un único escritor por dimensión.
+El operador debe mantener el orden de las observaciones.
+No existe un control global persistente del último lote aceptado,
+incluidos los lotes sin cambios.
 
-Un reintento idéntico se reconoce antes de evaluar su antigüedad.
-Un lote diferente con fecha igual o anterior se bloquea para revisión.
-M10 no insertará automáticamente cambios retroactivos en períodos cerrados.
+Cada cierre tipo 2 exige observed_at posterior al valid_from
+de la versión que se cierra. No se insertan cambios retroactivos
+automáticamente en períodos cerrados.
 
-Cada lote contendrá como máximo un estado por clave de negocio.
-Estados duplicados o contradictorios se rechazan antes de escribir.
-Para representar varios estados observados de la misma entidad,
-se requieren lotes sucesivos con instantes distintos.
+Una entrada idéntica al estado actual conserva valores y auditoría.
+El almacenamiento comprueba esa igualdad y evita otro commit Delta.
+Esto no equivale a reconocer cualquier lote aplicado anteriormente.
+
+Antes de repetir un intento fallido se revisa la versión real del destino.
+Una entrada antigua puede diferir del estado actual y no debe
+reprocesarse automáticamente.
+
+Cada lote contiene como máximo un estado por clave de negocio.
+Los duplicados se rechazan antes de escribir.
+Para representar estados sucesivos se utilizan observaciones distintas.
 
 ## Categorías de productos
 
@@ -134,9 +142,9 @@ hasta disponer de un contrato específico.
 | Escenario | Resultado |
 |---|---|
 | Cambio observado y procesado después | Vigencia desde observed_at |
-| Reintento idéntico | Mismo observed_at; ninguna versión duplicada |
-| Lote distinto con igual observed_at | Bloqueado |
-| Lote nuevo anterior al último aceptado | Bloqueado |
+| Entrada idéntica al estado actual | Sin cambios ni otro commit Delta |
+| Observación igual al inicio de una versión por cerrar | Cierre rechazado |
+| Lote antiguo presentado nuevamente | Revisión manual; sin registro global |
 | Timestamp sin zona horaria | Rechazado |
 | Solo cambia updated_at del origen | Ninguna versión nueva |
 | Cambio de nombre de categoría | Versiones nuevas para productos afectados |
@@ -145,6 +153,7 @@ hasta disponer de un contrato específico.
 
 ## Estado
 
-Contrato temporal definido para historial por observación.
-Implementación y pruebas pendientes.
+Contrato temporal adaptado al flujo simplificado.
+Preparación SCD y escritura Delta probadas con datos sintéticos.
+Integración del ejecutor y validación completa de operación pendientes.
 Este documento complementa scd-dimensions-plan.md.

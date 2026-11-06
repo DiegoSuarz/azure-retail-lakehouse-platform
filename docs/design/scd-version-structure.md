@@ -36,15 +36,17 @@ Los cambios tipo 1 y las filas sin cambios conservan sus claves.
 No se vuelve a ejecutar row_number sobre toda la dimensión
 para sustituir las claves existentes.
 
-Antes de modificar el destino se conservará un plan de aplicación
-con la asignación, batch_id, huella y versión Delta de partida.
-La implementación de persistencia y recuperación se realizará
-en el micromódulo correspondiente.
+La preparación calcula las claves sobre una versión Delta explícita
+y devuelve el plan de claves junto con el resultado dimensional completo.
 
-Un reintento reutiliza el plan aceptado.
-No recalcula claves desde un destino parcialmente modificado.
-Un destino con una versión inesperada bloquea la aplicación
-hasta comprobar si el lote ya se aplicó o requiere recuperación.
+El flujo simplificado no conserva automáticamente un plan persistente
+para recuperar intentos interrumpidos.
+
+Antes de escribir se comprueba que el destino siga en la versión de partida.
+Si cambió, se bloquea la aplicación para revisar su estado.
+
+Una entrada idéntica al estado actual no recibe nuevas claves.
+Después de un fallo se revisa el destino antes de preparar otro intento.
 
 Esta estrategia no admite escritores concurrentes.
 
@@ -74,8 +76,8 @@ Para una nueva versión SCD se registrará la ejecución que la construye.
 Para las filas heredadas se conservarán los valores originales de M9.
 
 Una vez aplicada la fila, esos campos permanecen inmutables.
-La identidad del intento de recuperación se registra separadamente
-en el control o informe de ejecución.
+El flujo simplificado no mantiene un registro automático
+de intentos de recuperación.
 
 ## Auditoría SCD
 
@@ -95,9 +97,9 @@ Al cerrar una versión, se actualiza su auditoría de modificación.
 Al aplicar tipo 1, se actualiza la auditoría de las filas corregidas.
 Las filas sin cambios no reciben nuevas marcas de modificación.
 
-Un reintento ya aplicado no cambia la auditoría de las filas.
-La preparación de una escritura debe fijar los valores que se conservarán
-en el plan de aplicación para recuperaciones.
+Una entrada idéntica al estado actual no modifica la auditoría.
+Un lote antiguo no se reconoce automáticamente como ya aplicado.
+Los intentos interrumpidos requieren revisión manual.
 
 ## Relación con hechos y referencias
 
@@ -119,8 +121,13 @@ No se utiliza para reconstruir y reemplazar dimensiones SCD completas.
 
 write_verified_gold_table comprueba una creación inicial
 y recupera versionAsOf = 0.
-Las actualizaciones SCD necesitarán un procedimiento propio
-que identifique y valide la versión Delta resultante.
+scd_storage.py aplica el resultado preparado mediante un MERGE por dimensión
+y compara los datos recuperados con el resultado esperado.
+Si los datos ya coinciden, conserva la versión Delta sin escribir.
+
+Una validación posterior puede fallar después de que Delta haya escrito.
+Productos y clientes no forman una transacción conjunta.
+Estos casos requieren revisión manual antes de repetir la ejecución.
 
 Las claves y nulabilidad son requisitos del contrato.
 Se comprobarán explícitamente sobre los datos persistidos;
@@ -128,5 +135,7 @@ no se presupone que Delta imponga claves primarias o relaciones.
 
 ## Estado
 
-Diseño de claves, vigencias y auditoría definido.
-Asignación persistente, aplicación y pruebas pendientes.
+Claves y preparación SCD implementadas en scd_transform.py.
+Lectura y aplicación Delta implementadas en scd_storage.py.
+Funciones y escritura local probadas con datos sintéticos.
+Ejecutor integrado y ejecución en Azure pendientes.

@@ -93,21 +93,30 @@ Una entidad inactiva puede tener una versión actual.
 | Entidad ausente del lote | Ninguna baja inferida |
 | SKU diferente para el mismo producto | Cambio bloqueado para revisión |
 
-## Decisiones pendientes de los siguientes micromódulos
+## Organización del flujo simplificado
 
-- Fecha efectiva y fecha de procesamiento.
-- Vigencia inicial para los registros heredados de M9.
-- Límites de intervalos y representación de la vigencia abierta.
-- Contrato de entradas, nulos, orden y cambios atrasados.
-- Distinción entre cambios, correcciones y bajas físicas.
-- Asignación persistente de claves y límites de concurrencia.
-- Resolución temporal de claves en hechos.
-- Vinculación del catálogo complementario con versiones de producto.
-- Idempotencia, recuperación y estrategia transaccional.
-- Rutas de prueba aisladas antes de modificar los destinos aceptados.
+- scd_transform.py reúne reglas, detección y preparación de cambios.
+- scd_storage.py lee versiones Delta y aplica el resultado mediante MERGE.
+- run_scd_local.py coordinará la ejecución; implementación pendiente.
+
+La inicialización y la resolución de claves de ventas permanecen
+en sus módulos específicos.
+
+El flujo utiliza un único escritor por dimensión.
+No incluye huellas de lotes, registro de estados ni recuperación automática.
+La igualdad con el estado actual evita escrituras innecesarias.
+Los fallos y las entradas antiguas requieren revisión manual.
+
+## Pendientes
+
+- Integrar el ejecutor y verificar la operación con lotes consecutivos.
+- Completar los controles del historial en la ejecución integrada.
+- Precisar el consumo del catálogo complementario con versiones de producto.
+- Ejecutar y verificar el flujo en Azure.
+- Consolidar las evidencias y el cierre de M10.
 
 ## Estado
 
-Matriz de atributos y escenarios definidos.
-Implementación y pruebas SCD pendientes.
-No se han modificado las tablas Gold aceptadas en M9.
+Inicialización local y funciones de transformación y ventas verificadas.
+Almacenamiento Delta probado con datos sintéticos en rutas temporales.
+Las tablas Gold aceptadas de M9 permanecen sin modificaciones.
