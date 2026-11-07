@@ -97,7 +97,7 @@ Una entidad inactiva puede tener una versión actual.
 
 - scd_transform.py reúne reglas, detección y preparación de cambios.
 - scd_storage.py lee versiones Delta y aplica el resultado mediante MERGE.
-- run_scd_local.py coordinará la ejecución; implementación pendiente.
+- run_scd_local.py coordina la ejecución local por dimensión.
 
 La inicialización y la resolución de claves de ventas permanecen
 en sus módulos específicos.
@@ -107,10 +107,12 @@ No incluye huellas de lotes, registro de estados ni recuperación automática.
 La igualdad con el estado actual evita escrituras innecesarias.
 Los fallos y las entradas antiguas requieren revisión manual.
 
+El ejecutor y los controles temporales están integrados.
+Se verificaron dos lotes consecutivos por dimensión y repeticiones sin cambios.
+La evidencia se conserva en [Ejecución local](scd-local-execution.md).
+
 ## Pendientes
 
-- Integrar el ejecutor y verificar la operación con lotes consecutivos.
-- Completar los controles del historial en la ejecución integrada.
 - Precisar el consumo del catálogo complementario con versiones de producto.
 - Ejecutar y verificar el flujo en Azure.
 - Consolidar las evidencias y el cierre de M10.
@@ -118,5 +120,6 @@ Los fallos y las entradas antiguas requieren revisión manual.
 ## Estado
 
 Inicialización local y funciones de transformación y ventas verificadas.
-Almacenamiento Delta probado con datos sintéticos en rutas temporales.
+Flujo integrado probado con datos sintéticos para productos y clientes.
+Ambos destinos de demostración alcanzaron la versión Delta 2 con siete filas.
 Las tablas Gold aceptadas de M9 permanecen sin modificaciones.

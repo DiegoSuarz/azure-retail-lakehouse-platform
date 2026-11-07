@@ -119,16 +119,19 @@ No se deduce la fecha del cambio conjunto usando solo el producto.
 
 ## Inicialización y hechos anteriores
 
-La base heredada de M9 conservará sus claves dimensionales.
-M10.4 definirá el inicio y el tratamiento de las ventas anteriores
-sin atribuirles un historial de negocio no demostrado.
+La inicialización local aceptada conserva las claves heredadas de M9.
+El inicio del historial corresponde al observed_at de inicialización,
+sin atribuir vigencias de negocio anteriores no demostradas.
+La evidencia se conserva en scd-initialization-local.md.
 
 No se aplicarán nuevos lotes hasta aceptar esa inicialización.
 La resolución temporal posterior utilizará order_date_utc,
 no una fecha truncada al día, para compararla con vigencias timestamp.
 
-El tratamiento de hechos anteriores al inicio, ventas tardías
-y correcciones de relaciones se precisará antes de modificar fact_sales.
+El contrato scd-sales-key-resolution.md define la conservación de ventas
+heredadas y la resolución temporal de ventas nuevas, incluidas las tardías.
+Las correcciones de relaciones requieren revisión explícita.
+Las pruebas realizadas no modificaron fact_sales.
 
 ## Bajas
 
@@ -154,6 +157,8 @@ hasta disponer de un contrato específico.
 ## Estado
 
 Contrato temporal adaptado al flujo simplificado.
-Preparación SCD y escritura Delta probadas con datos sintéticos.
-Integración del ejecutor y validación completa de operación pendientes.
+Ejecutor, preparación SCD y escritura Delta comprobados localmente.
+Se verificaron controles del historial, lotes consecutivos y entradas repetidas.
+La evidencia se conserva en scd-local-execution.md.
+La ejecución en Azure permanece pendiente.
 Este documento complementa scd-dimensions-plan.md.

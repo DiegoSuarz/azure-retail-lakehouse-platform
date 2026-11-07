@@ -106,8 +106,9 @@ Los intentos interrumpidos requieren revisión manual.
 Las claves de fact_sales existentes se conservan durante
 la preparación de la estructura dimensional.
 
-La resolución temporal para hechos nuevos y el tratamiento
-de hechos anteriores se definirán antes de actualizar fact_sales.
+La resolución temporal para hechos nuevos y la conservación
+de hechos anteriores están definidas en scd-sales-key-resolution.md.
+Sus funciones fueron probadas sin modificar fact_sales.
 
 product_catalog_mapping conserva claves de producto de M9.
 No se interpretará su product_key como vínculo automático
@@ -135,7 +136,10 @@ no se presupone que Delta imponga claves primarias o relaciones.
 
 ## Estado
 
-Claves y preparación SCD implementadas en scd_transform.py.
+Claves, preparación SCD y controles temporales implementados
+en scd_transform.py.
 Lectura y aplicación Delta implementadas en scd_storage.py.
-Funciones y escritura local probadas con datos sintéticos.
-Ejecutor integrado y ejecución en Azure pendientes.
+Ejecutor integrado en run_scd_local.py.
+Dos lotes consecutivos por dimensión y repeticiones sin cambios
+verificados localmente; evidencia en scd-local-execution.md.
+La ejecución en Azure permanece pendiente.
