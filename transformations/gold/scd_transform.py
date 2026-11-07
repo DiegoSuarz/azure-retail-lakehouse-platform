@@ -474,6 +474,7 @@ def prepare_scd_dimension(
 ):
     """Coordina la preparación SCD completa sin escribir tablas."""
     changes = detect_scd_changes(incoming, dimension, dimension_name)
+    validate_scd_history(dimension, dimension_name)
     plan = assign_new_version_keys(changes, dimension, dimension_name)
 
     corrected = prepare_type1_updates(
@@ -488,8 +489,58 @@ def prepare_scd_dimension(
         batch_id, run_id, observed_at, processed_at,
     )
 
+    result = closed.unionByName(new_versions)
+    validate_scd_history(result, dimension_name)
+
     return {
-        "dimension": closed.unionByName(new_versions),
+        "dimension": result,
         "key_plan": plan,
         "changes": changes,
     }
+
+
+def validate_scd_history(frame, dimension_name):
+    """Comprueba vigencias válidas, contiguas y una versión actual por entidad."""
+    if dimension_name not in SCD_RULES:
+        raise ValueError("Dimensión no admitida para validar el historial.")
+
+    business_key = SCD_RULES[dimension_name]["business_key"]
+    for name, expected in (
+        (business_key, T.IntegerType()),
+        ("valid_from", T.TimestampType()),
+        ("valid_to", T.TimestampType()),
+        ("is_current", T.BooleanType()),
+    ):
+        if name not in frame.columns or frame.schema[name].dataType != expected:
+            raise ValueError(f"Columna temporal ausente o incompatible: {name}")
+
+    invalid = (
+        F.col(business_key).isNull()
+        | (F.col(business_key) <= 0)
+        | F.col("valid_from").isNull()
+        | ~F.col("is_current").eqNullSafe(F.col("valid_to").isNull())
+        | (
+            F.col("valid_to").isNotNull()
+            & (F.col("valid_to") <= F.col("valid_from"))
+        )
+    )
+    if frame.filter(invalid).limit(1).count():
+        raise ValueError("El historial contiene claves o vigencias inválidas.")
+
+    current_counts = frame.groupBy(business_key).agg(
+        F.sum(F.when(F.col("is_current"), 1).otherwise(0)).alias("current_count")
+    )
+    if current_counts.filter("current_count <> 1").limit(1).count():
+        raise ValueError("Cada entidad debe tener exactamente una versión actual.")
+
+    sequence = Window.partitionBy(business_key).orderBy("valid_from")
+    intervals = frame.select(
+        business_key, "valid_from", "valid_to"
+    ).withColumn(
+        "next_valid_from", F.lead("valid_from").over(sequence)
+    )
+    if intervals.filter(
+        F.col("next_valid_from").isNotNull()
+        & ~F.col("valid_to").eqNullSafe(F.col("next_valid_from"))
+    ).limit(1).count():
+        raise ValueError("El historial contiene solapamientos o huecos.")
