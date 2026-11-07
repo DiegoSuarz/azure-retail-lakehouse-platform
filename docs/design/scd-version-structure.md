@@ -110,10 +110,12 @@ La resolución temporal para hechos nuevos y la conservación
 de hechos anteriores están definidas en scd-sales-key-resolution.md.
 Sus funciones fueron probadas sin modificar fact_sales.
 
-product_catalog_mapping conserva claves de producto de M9.
-No se interpretará su product_key como vínculo automático
-con todas las nuevas versiones.
-Su política de consulta o adaptación debe resolverse explícitamente.
+product_catalog_mapping conserva la fotografía y las claves de M9.
+Su product_key identifica la versión original, no todas las versiones SCD.
+El consumo actual utiliza product_id y una única versión dimensional.
+El consumo desde ventas conserva primero su product_key histórica.
+La política y el control de multiplicidad se describen
+en scd-dimensions-plan.md, sección Consumo del catálogo complementario.
 
 ## Persistencia y validación
 

@@ -111,9 +111,45 @@ El ejecutor y los controles temporales están integrados.
 Se verificaron dos lotes consecutivos por dimensión y repeticiones sin cambios.
 La evidencia se conserva en [Ejecución local](scd-local-execution.md).
 
+## Consumo del catálogo complementario
+
+product_catalog_mapping conserva la fotografía aceptada de M9.
+No se reconstruye ni se generan asociaciones por cada versión SCD.
+
+Su product_key identifica la versión original de M9.
+product_id permite consultar la asociación desde otras versiones
+de la misma entidad, cuya clave de negocio se mantiene estable.
+
+Para consultar productos actuales:
+
+- Filtrar dim_product con is_current = true.
+- Unir el mapping por product_id.
+- Obtener los atributos locales desde dim_product.
+- Obtener los atributos externos y la asociación desde el mapping.
+
+Para enriquecer ventas históricas:
+
+- Resolver la versión de producto mediante fact_sales.product_key.
+- Incorporar la asociación externa mediante product_id.
+- Conservar los importes de la venta y su clave dimensional.
+
+No se une el mapping por product_id contra todo el historial
+sin seleccionar primero la versión dimensional correspondiente.
+
+Los campos local_* del mapping conservan los valores originales de M9.
+La asociación externa no tiene historial temporal y no demuestra
+qué asociación existía en la fecha de una venta.
+
+Se conserva el grano original por source_system y external_product_id.
+Una entidad local puede tener varias asociaciones externas:
+el enriquecimiento de ventas debe seleccionar una asociación explícita
+o agregarlas antes de unir, para evitar multiplicar líneas e importes.
+
+build_product_catalog_mapping permanece como constructor inicial de M9.
+No se utiliza sobre una dimensión con varias versiones por product_id.
+
 ## Pendientes
 
-- Precisar el consumo del catálogo complementario con versiones de producto.
 - Ejecutar y verificar el flujo en Azure.
 - Consolidar las evidencias y el cierre de M10.
 
