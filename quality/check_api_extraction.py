@@ -67,26 +67,26 @@ def main():
         "records_processed": None,
         "records": None,
         "reconciliation": "not_evaluated",
-        "manifest_controls": "not_evaluated",
+        "source_validation": "not_evaluated",
         "availability": None,
         "errors": [],
         "quarantine_files": [],
     }
-    manifest = None
+    extraction = None
     records = None
     payloads = None
 
     try:
-        manifest, responses, payloads = read_extraction(source_dir)
-        source = manifest["source_system"]
+        extraction, responses, payloads = read_extraction(source_dir)
+        source = extraction["source_system"]
         report["source_system"] = source
-        report["ingestion_run_id"] = manifest["ingestion_run_id"]
+        report["ingestion_run_id"] = extraction["ingestion_run_id"]
 
         evaluator = (
             evaluate_dummyjson if source == "dummyjson"
             else evaluate_bcrpdata
         )
-        records = evaluator(manifest, responses, payloads)
+        records = evaluator(extraction, responses, payloads)
         counts = Counter(row["status"] for row in records)
         if set(counts) - {"accepted", "rejected"}:
             raise ExtractionError("DQ017", "Clasificación inesperada")
@@ -102,7 +102,7 @@ def main():
                 "rejected": counts["rejected"],
             },
             "reconciliation": "passed",
-            "manifest_controls": (
+            "source_validation": (
                 "passed" if counts["rejected"] == 0
                 else "not_fully_validated"
             ),
@@ -122,7 +122,7 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
 
     if report["status"] == "completed_for_scope":
-        source = manifest["source_system"]
+        source = extraction["source_system"]
         entity = "products" if source == "dummyjson" else "exchange_rates"
         quarantine = []
         for record in records:
@@ -135,7 +135,7 @@ def main():
             quarantine.append({
                 "source_system": source,
                 "entity": entity,
-                "ingestion_run_id": manifest["ingestion_run_id"],
+                "ingestion_run_id": extraction["ingestion_run_id"],
                 "processing_run_id": processing_id,
                 "source_file": str(source_dir / relative),
                 "source_sha256": hashlib.sha256(payload).hexdigest(),

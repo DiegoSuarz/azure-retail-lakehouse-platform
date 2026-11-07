@@ -133,7 +133,7 @@ Los pedidos independientes pueden seguir aceptados.
 | S15 | Transición de estado inválida rechazada |
 | S16 | Producto inexistente y exclusión del pedido afectado |
 | S17 | Descuento inválido y exclusión del pedido afectado |
-| S18 | Bloqueo por hash incorrecto |
+| S18 histórico | Bloqueo por hash incorrecto en el contrato anterior |
 | S19 | Un pedido en conflicto y cuatro líneas rechazadas |
 | S20 | Modificación de atributo estable rechazada |
 | batch_002 contra referencia posterior | Un duplicado y un pendiente |

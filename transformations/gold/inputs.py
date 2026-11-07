@@ -1,6 +1,5 @@
 """Lectura de entradas Silver versionadas para Gold local."""
 
-import json
 from pathlib import Path
 
 
@@ -16,22 +15,9 @@ EXPECTED_ENTITIES = {
 }
 
 
-def read_gold_inputs(spark, manifest_path, repository_root):
-    """Lee versiones Delta explícitas y comprueba sus conteos."""
+def read_gold_inputs(spark, tables, repository_root):
+    """Lee entradas Delta explícitas y comprueba sus conteos."""
     root = Path(repository_root).resolve()
-    manifest = json.loads(
-        Path(manifest_path).read_text(encoding="utf-8")
-    )
-
-    if (
-        type(manifest.get("schema_version")) is not int
-        or manifest["schema_version"] != 1
-        or manifest.get("scope") != "local_gold_initial_inputs"
-        or manifest.get("path_base") != "repository_root"
-    ):
-        raise ValueError("Contrato del inventario Gold incompatible.")
-
-    tables = manifest.get("tables")
     if not isinstance(tables, dict) or set(tables) != EXPECTED_ENTITIES:
         raise ValueError("Inventario de entidades Silver incompatible.")
 

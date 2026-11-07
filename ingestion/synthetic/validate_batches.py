@@ -6,6 +6,12 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "quality"))
+
+from validate_batch_transport import read_batch, TransportError
 
 BATCHES = ("batch_001", "batch_002", "batch_003", "batch_004")
 ALLOWED_FILES = {"orders.csv", "order_items.csv", "changes.jsonl"}
@@ -40,64 +46,24 @@ def count_rows(filename, payload):
 
 
 def validate_batch(directory):
-    manifest_path = directory / "manifest.json"
-    require(manifest_path.is_file(), f"Manifiesto ausente: {directory}")
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-
-    require(
-        type(manifest.get("schema_version")) is int
-        and manifest["schema_version"] == 1,
-        f"Versión incorrecta: {directory.name}",
-    )
-    require(
-        manifest.get("batch_id") == directory.name,
-        f"Identidad incorrecta: {directory.name}",
-    )
-    files = manifest.get("files")
-    require(
-        isinstance(files, dict) and bool(files),
-        f"Inventario vacío o inválido: {directory.name}",
-    )
-    require(
-        set(files) <= ALLOWED_FILES,
-        f"Archivos no admitidos: {directory.name}",
-    )
-    require(
-        ("orders.csv" in files) == ("order_items.csv" in files),
-        f"Pedidos y líneas deben entregarse juntos: {directory.name}",
-    )
-
-    actual = {path.name for path in directory.iterdir()}
-    require(
-        actual == set(files) | {"manifest.json"},
-        f"Archivos ausentes o adicionales: {directory.name}",
-    )
-
-    for filename, metadata in files.items():
-        require(
-            isinstance(metadata, dict),
-            f"Metadatos inválidos: {directory.name}/{filename}",
+    """Valida datos y calcula una referencia temporal para la preparación."""
+    directory = Path(directory)
+    try:
+        batch_id, payloads, counts = read_batch(
+            directory, expected_batch_id=directory.name
         )
-        path = directory / filename
-        require(path.is_file(), f"No es un archivo: {path}")
-        payload = path.read_bytes()
-        digest = hashlib.sha256(payload).hexdigest()
-        require(
-            digest == metadata.get("sha256"),
-            f"Hash incorrecto: {path}",
-        )
-        expected_count = metadata.get("row_count")
-        require(
-            type(expected_count) is int and expected_count >= 0,
-            f"Conteo declarado inválido: {path}",
-        )
-        require(
-            count_rows(filename, payload) == expected_count,
-            f"Conteo diferente del manifiesto: {path}",
-        )
-        print(f"PASS: {directory.name}/{filename}")
+    except TransportError as error:
+        raise SystemExit(f"FAIL: {error.code}: {error}") from error
 
-    return manifest
+    files = {}
+    for filename, payload in payloads.items():
+        files[filename] = {
+            "row_count": counts[filename],
+            "sha256": hashlib.sha256(payload).hexdigest(),
+        }
+        print(f"PASS: {batch_id}/{filename}")
+
+    return {"batch_id": batch_id, "files": files}
 
 
 def main():

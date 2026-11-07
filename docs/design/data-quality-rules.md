@@ -37,9 +37,9 @@ como not_evaluated. No se declarará aceptación completa del registro.
 
 | Código | Control | Acción ante incumplimiento |
 |---|---|---|
-| DQ001 | Manifiesto presente, versión e identidad válidas | Bloquear lote |
-| DQ002 | Archivos declarados, tamaños y hashes cuando estén definidos | Bloquear lote |
-| DQ003 | Conteos coincidentes con el manifiesto | Bloquear lote |
+| DQ001 | Identidad de lote o extracción y procedencia compatibles | Bloquear lote |
+| DQ002 | Archivos admitidos, entrega conjunta y procedencia íntegra cuando corresponda | Bloquear lote |
+| DQ003 | Conteos coherentes entre lectura y evaluación cuando corresponda | Bloquear lote |
 | DQ004 | Encabezados CSV y estructura de archivos compatibles | Bloquear lote si no se pueden interpretar |
 | DQ005 | Campos obligatorios, tipos, formatos y longitudes del contrato | Rechazar registro |
 | DQ006 | Claves positivas e identidad única | Rechazar o clasificar duplicado/conflicto |
@@ -139,7 +139,7 @@ manteniendo los eventos pendientes separados de los rechazos.
 - S15: transición de estado inválida.
 - S16: referencia a producto inexistente.
 - S17: descuento superior al importe bruto.
-- S18: lote bloqueado por hash incorrecto.
+- S18 vigente: JSONL mal formado, bloqueado por DQ004.
 - S19: pedido existente con contenido diferente.
 - S20: modificación de un atributo estable.
 - Eventos pendientes y duplicados con referencias conocidas.

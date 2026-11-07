@@ -22,8 +22,11 @@ PAGE = "category=laptops/page_000001.json"
 
 class ApiReportTests(unittest.TestCase):
     def copy_source(self, root):
-        destination = root / SOURCE.parent.name / SOURCE.name
-        shutil.copytree(SOURCE, destination)
+        destination = root / "dummyjson" / "products" / SOURCE.parent.name / SOURCE.name
+        shutil.copytree(
+            SOURCE, destination,
+            ignore=shutil.ignore_patterns("manifest.json"),
+        )
         return destination
 
     def execute(self, source, output, expected_exit):
@@ -62,20 +65,6 @@ class ApiReportTests(unittest.TestCase):
             ).encode("utf-8")
             sidecar.write_bytes(sidecar_payload)
 
-            manifest_path = source / "manifest.json"
-            manifest = json.loads(manifest_path.read_bytes())
-            manifest["files"][PAGE].update({
-                "sha256": digest,
-                "size_bytes": len(payload),
-            })
-            manifest["files"][PAGE + ".metadata.json"].update({
-                "sha256": hashlib.sha256(sidecar_payload).hexdigest(),
-                "size_bytes": len(sidecar_payload),
-            })
-            manifest_path.write_text(
-                json.dumps(manifest) + "\n", encoding="utf-8"
-            )
-
             output = root / "output"
             report = self.execute(source, output, 0)
             self.assertEqual(report["status"], "completed_for_scope")
@@ -83,7 +72,7 @@ class ApiReportTests(unittest.TestCase):
                 report["records"],
                 {"read": 38, "accepted": 37, "rejected": 1},
             )
-            self.assertEqual(report["manifest_controls"], "not_fully_validated")
+            self.assertEqual(report["source_validation"], "not_fully_validated")
             self.assertEqual(len(report["quarantine_files"]), 1)
 
             entry = report["quarantine_files"][0]
@@ -104,7 +93,7 @@ class ApiReportTests(unittest.TestCase):
                 row["processing_run_id"], report["processing_run_id"]
             )
             self.assertEqual(
-                row["ingestion_run_id"], manifest["ingestion_run_id"]
+                row["ingestion_run_id"], provenance["ingestion_run_id"]
             )
             self.assertIn(
                 "stock", {error["field"] for error in row["errors"]}

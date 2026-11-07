@@ -23,16 +23,16 @@ los incrementales como archivos independientes.
 
 ## Identidad y reproducibilidad
 
-Los escenarios partirán de data/initial y su manifiesto validado.
+Los escenarios partirán de los cinco CSV iniciales validados.
 
 El generador deberá:
 
-- Verificar los hashes del conjunto inicial.
+- Leer los CSV iniciales y calcular las referencias de prueba.
 - Seleccionar claves existentes a partir de los datos.
 - Asignar claves nuevas sin colisiones.
 - Utilizar fechas e identificadores de eventos deterministas.
 - Producir imágenes completas para los eventos.
-- Publicar cada manifiesto después de escribir sus archivos.
+- Escribir únicamente los archivos de datos de cada lote.
 - Rechazar carpetas de salida que ya contengan datos.
 
 No se supondrá que un pedido específico tiene un estado determinado:
@@ -75,7 +75,7 @@ Las secuencias serán consecutivas por entidad y clave.
 | S15 | Pedido cancelled intenta volver a confirmed | Rechazar la transición |
 | S16 | Línea referencia un producto inexistente | Separar el registro y evitar publicar el pedido incompleto |
 | S17 | Descuento supera el importe bruto | Rechazar la línea y evitar publicar el pedido incompleto |
-| S18 | Falta un archivo declarado o cambia su hash | Bloquear el lote antes del procesamiento de negocio |
+| S18 | JSONL mal formado | Bloquear el lote con DQ004 antes de evaluar reglas de negocio |
 | S19 | Pedido existente reaparece con contenido diferente | Registrar conflicto sin sobrescribirlo como pedido nuevo |
 | S20 | Evento modifica un atributo estable | Rechazar su aplicación |
 
@@ -87,8 +87,8 @@ según las reglas del negocio.
 
 ## Controles esperados
 
-Se preparará un archivo de expectativas separado del manifiesto
-de transporte, para registrar:
+Se preparará un archivo de expectativas fuera de los lotes,
+utilizado exclusivamente por las pruebas, para registrar:
 
 - Escenarios incluidos y orden de entrega.
 - Claves nuevas y eventos únicos.

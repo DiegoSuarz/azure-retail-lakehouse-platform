@@ -31,12 +31,14 @@ Los bloqueos se liberan al terminar y no cubren la extracción de ADF.
 Se mantendrá una ventana sin escrituras durante extracción y validación.
 La referencia se comparará con los Parquet y una captura posterior.
 
-Esta referencia local no sustituye el manifiesto final de Bronze.
+Esta referencia local debe complementarse con la validación Parquet
+y la revisión manual de ADF.
 
 ## Estado
 
 Captura del origen implementada y comprobada.
-Carga inicial validada y manifiesto publicado en Bronze.
+Carga inicial histórica validada con manifiesto publicado en Bronze.
+El flujo actual no requiere generar ni publicar nuevos manifiestos.
 
 ## Validación de Parquet
 
@@ -47,7 +49,8 @@ Comprueba columnas, tipos compatibles, conteos, claves,
 todos los valores y relaciones entre las cinco entidades.
 
 Genera un informe local únicamente cuando los controles pasan.
-Este informe no sustituye el manifiesto publicado en Bronze.
+Este informe no sustituye la revisión manual de las métricas de ADF
+ni la comparación de los archivos cloud con los validados.
 
 Pruebas locales realizadas:
 
@@ -61,30 +64,28 @@ se crearon en una carpeta temporal y se eliminaron al terminar.
 Los cinco Parquet reales de ADF se validaron satisfactoriamente
 contra las referencias de SQL Server antes y después.
 
-## Manifiesto de extracción
+## Aceptación sin manifiesto
 
-build_initial_manifest.py utiliza las referencias del origen,
-los Parquet descargados y los metadatos reales de ADF.
+Se retira el constructor build_initial_manifest.py.
+La validación de datos se ejecuta directamente:
 
-La carpeta descargada debe llamarse run_id=<RunId> y contener
-los directorios de las cinco entidades.
+    python tests/ingestion/validate_initial_parquet.py \
+        --before RUTA_CAPTURA_ANTERIOR \
+        --after RUTA_CAPTURA_POSTERIOR \
+        --parquet-dir CARPETA_PARQUET \
+        --report RUTA_NUEVO_INFORME
 
-El generador exige:
+El operador revisa en ADF estados, identificadores, fechas,
+consistencia Verified y métricas de filas y archivos.
+Confirma la ventana sin escrituras y que las capturas delimitan
+la extracción. Conserva evidencia de esa revisión.
 
-- Pipeline y cinco copias con estado Succeeded.
-- Identificadores y fechas de ejecución válidos.
-- Capturas del origen que delimiten la extracción.
-- Confirmación de la ventana sin escrituras.
-- Verificación de consistencia de Copy con resultado Verified.
-- Validación local de los Parquet satisfactoria.
-- Conteos de filas y archivos coincidentes con ADF.
+También compara los archivos cloud con los descargados y validados.
+El informe Parquet no acredita automáticamente estas revisiones.
 
-Genera manifest.json en la raíz local de la ejecución.
-No sobrescribe un manifiesto existente ni publica archivos en Azure.
+Procedimiento: [Aceptación de extracción inicial](../../docs/design/initial-extraction-manifest.md).
 
-Se comprobó el rechazo de metadatos incompletos sin generar manifiesto.
-El manifiesto se generó con evidencias reales, se publicó en Bronze
-y se verificó mediante descarga y comparación byte por byte.
+La ejecución documentada a continuación pertenece al flujo histórico.
 
 ## Ejecución inicial aceptada
 

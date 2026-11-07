@@ -65,27 +65,13 @@ class ExistingOrderTests(unittest.TestCase):
         elif variant == "missing_line":
             items.pop()
 
-        files = {}
         for filename, rows in (("orders.csv", [order]), ("order_items.csv", items)):
             path = directory / filename
             with path.open("w", encoding="utf-8", newline="") as stream:
                 writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
                 writer.writeheader()
                 writer.writerows(rows)
-            files[filename] = {
-                "row_count": len(rows),
-                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-            }
 
-        (directory / "manifest.json").write_text(
-            json.dumps({
-                "schema_version": 1,
-                "batch_id": f"replay_{variant}",
-                "created_at": "2026-10-02T00:00:00.000Z",
-                "files": files,
-            }),
-            encoding="utf-8",
-        )
 
     def test_s19_preserves_conflict_evidence(self):
         with tempfile.TemporaryDirectory() as temporary:

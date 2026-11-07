@@ -3,7 +3,7 @@
 import argparse
 import csv
 import getpass
-import json
+from collections import Counter
 import os
 import subprocess
 import sys
@@ -87,9 +87,6 @@ def main():
         check=True,
     )
 
-    manifest = json.loads(
-        (DATA / "manifest.json").read_text(encoding="utf-8")
-    )
     datasets = {}
 
     for table, fields in TABLES.items():
@@ -102,6 +99,26 @@ def main():
                 tuple(convert(field, row[field]) for field in fields)
                 for row in reader
             ]
+
+    orders = [
+        dict(zip(TABLES["orders"], row))
+        for row in datasets["orders"]
+    ]
+    order_status = {row["order_id"]: row["status"] for row in orders}
+    expected_status_counts = dict(Counter(order_status.values()))
+    expected_totals = [Decimal("0") for _ in range(4)] + [0]
+
+    for values in datasets["order_items"]:
+        row = dict(zip(TABLES["order_items"], values))
+        gross = row["quantity"] * row["unit_price"]
+        discount = row["discount_amount"]
+        net = gross - discount
+        expected_totals[0] += gross
+        expected_totals[1] += discount
+        expected_totals[2] += net
+        if order_status[row["order_id"]] == "confirmed":
+            expected_totals[3] += net
+            expected_totals[4] += row["quantity"]
 
     password = os.environ.get("SQL_SERVER_PASSWORD") or getpass.getpass(
         "Contraseña de retail_loader: "
@@ -144,7 +161,7 @@ def main():
             actual = cursor.execute(
                 f"SELECT COUNT_BIG(*) FROM dbo.[{table}]"
             ).fetchone()[0]
-            expected = manifest["files"][f"{table}.csv"]["row_count"]
+            expected = len(datasets[table])
             require(actual == expected, f"Conteo incorrecto: {table}")
             print(f"PASS: {table}, {actual} registros.")
 
@@ -152,8 +169,8 @@ def main():
             "SELECT status, COUNT_BIG(*) FROM dbo.orders GROUP BY status"
         ).fetchall())
         require(
-            status_counts == manifest["controls"]["order_status_counts"],
-            "Conteos por estado diferentes del manifiesto.",
+            status_counts == expected_status_counts,
+            "Conteos por estado diferentes de los CSV.",
         )
 
         totals = cursor.execute("""
@@ -170,7 +187,6 @@ def main():
             JOIN dbo.orders AS o ON o.order_id = i.order_id;
         """).fetchone()
 
-        controls = manifest["controls"]
         names = [
             "gross_amount_all_orders",
             "discount_amount_all_orders",
@@ -179,12 +195,12 @@ def main():
         ]
         for index, name in enumerate(names):
             require(
-                totals[index] == Decimal(controls[name]),
+                totals[index] == expected_totals[index],
                 f"Importe incorrecto: {name}",
             )
         require(
-            totals[4] == controls["quantity_confirmed_orders"],
-            "Unidades confirmadas diferentes del manifiesto.",
+            totals[4] == expected_totals[4],
+            "Unidades confirmadas diferentes de los CSV.",
         )
 
         connection.commit()

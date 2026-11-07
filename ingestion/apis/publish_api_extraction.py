@@ -5,9 +5,7 @@ import hashlib
 import json
 import sys
 import tempfile
-from datetime import date
 from pathlib import Path
-from uuid import UUID
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "ingestion/synthetic"))
@@ -15,72 +13,53 @@ sys.path.insert(0, str(ROOT / "ingestion/synthetic"))
 from ingest_batches import upload, verify
 from api_common import require, utc_now, write_json
 
+sys.path.insert(0, str(ROOT))
+from quality.api_extraction_input import read_extraction
+from quality.dummyjson_rules import evaluate_dummyjson
+from quality.bcrpdata_rules import evaluate_bcrpdata
+
 
 def prepare(run_dir, api_root, staged):
-    manifest_bytes = (run_dir / "manifest.json").read_bytes()
-    manifest = json.loads(manifest_bytes)
-    require(manifest.get("schema_version") == 1, "Versión incompatible")
-    require(manifest.get("status") == "completed", "Extracción incompleta")
+    extraction, responses, payloads = read_extraction(run_dir)
+    evaluator = (
+        evaluate_dummyjson
+        if extraction["source_system"] == "dummyjson"
+        else evaluate_bcrpdata
+    )
+    records = evaluator(extraction, responses, payloads)
+    require(
+        bool(records) and all(row["status"] == "accepted" for row in records),
+        "La extracción contiene registros inválidos o está vacía",
+    )
 
-    source = manifest.get("source_system")
-    require(source in {"dummyjson", "bcrpdata"}, "Fuente no admitida")
-    run_id = manifest["ingestion_run_id"]
-    UUID(run_id)
-    ingestion_date = date.fromisoformat(manifest["ingestion_date"]).isoformat()
-
+    source = extraction["source_system"]
+    run_id = extraction["ingestion_run_id"]
+    ingestion_date = extraction["ingestion_date"]
     if source == "dummyjson":
         expected = (
             f"dummyjson/products/ingestion_date={ingestion_date}/"
             f"run_id={run_id}"
         )
     else:
-        require(manifest.get("series_code") == "PD04638PD", "Serie incorrecta")
         expected = (
             "bcrpdata/exchange_rates/series_code=pd04638pd/"
             f"ingestion_date={ingestion_date}/run_id={run_id}"
         )
-
     require(
         run_dir == (api_root / expected).resolve(),
-        "La ruta no coincide con la identidad del manifiesto",
-    )
-
-    files = manifest.get("files")
-    require(isinstance(files, dict) and bool(files), "Inventario inválido")
-    require("manifest.json" not in files, "Inventario incluye el manifiesto")
-
-    actual = {
-        path.relative_to(run_dir).as_posix()
-        for path in run_dir.rglob("*") if path.is_file()
-    }
-    require(
-        actual == set(files) | {"manifest.json"},
-        "Archivos ausentes o adicionales",
+        "La ruta no coincide con la identidad de extracción",
     )
 
     inventory = {}
-    for relative, metadata in files.items():
-        path = (run_dir / relative).resolve()
-        require(path.is_relative_to(run_dir), f"Ruta no segura: {relative}")
-        require(isinstance(metadata, dict), f"Metadatos inválidos: {relative}")
-        payload = path.read_bytes()
-        digest = hashlib.sha256(payload).hexdigest()
-        require(digest == metadata.get("sha256"), f"Hash diferente: {relative}")
-        require(
-            len(payload) == metadata.get("size_bytes"),
-            f"Tamaño diferente: {relative}",
-        )
+    for relative, payload in payloads.items():
         target = staged / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(payload)
-        inventory[relative] = {"sha256": digest, "size_bytes": len(payload)}
-
-    (staged / "manifest.json").write_bytes(manifest_bytes)
-    inventory["manifest.json"] = {
-        "sha256": hashlib.sha256(manifest_bytes).hexdigest(),
-        "size_bytes": len(manifest_bytes),
-    }
-    return manifest, expected, inventory
+        inventory[relative] = {
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "size_bytes": len(payload),
+        }
+    return extraction, expected, inventory
 
 
 def main():
@@ -100,11 +79,11 @@ def main():
     with tempfile.TemporaryDirectory() as temporary:
         staged = Path(temporary) / "staged"
         staged.mkdir()
-        manifest, prefix, inventory = prepare(
+        extraction, prefix, inventory = prepare(
             args.run_dir.resolve(), args.api_root.resolve(), staged,
         )
 
-        print(f"PASS: {len(inventory)} archivos preparados, incluido el manifiesto.")
+        print(f"PASS: {len(inventory)} archivos de respuestas y metadatos preparados.")
         print(f"DESTINO: bronze/{prefix}/")
         if not args.publish:
             print("ALCANCE: preparación local; no se publicaron archivos.")
@@ -112,8 +91,8 @@ def main():
 
         report = {
             "schema_version": 1,
-            "source_system": manifest["source_system"],
-            "ingestion_run_id": manifest["ingestion_run_id"],
+            "source_system": extraction["source_system"],
+            "ingestion_run_id": extraction["ingestion_run_id"],
             "account_name": args.account_name,
             "container": "bronze",
             "prefix": prefix,
@@ -131,8 +110,7 @@ def main():
                 encoding="utf-8",
             )
 
-        filenames = sorted(set(inventory) - {"manifest.json"})
-        filenames.append("manifest.json")
+        filenames = sorted(inventory)
 
         try:
             for index, relative in enumerate(filenames):

@@ -126,9 +126,13 @@ si falta, solicita la contraseña de retail_loader de forma oculta.
 Utiliza una transacción para las cinco tablas y rechaza tablas con datos.
 
 Antes de confirmar, reconcilia conteos, estados, importes y unidades
-contra el manifiesto. Si falla, revierte la transacción.
+contra referencias calculadas desde los CSV cargados.
+Si falla, revierte la transacción.
 
-Carga verificada con semilla 42:
+La versión adaptada sin manifiesto tiene pendiente la prueba de carga
+real en SQL Server.
+
+Carga histórica verificada con semilla 42, anterior a esta adaptación:
 
 - categories: 6 registros.
 - products: 60 registros.

@@ -1,7 +1,6 @@
 """Extrae y valida la serie histórica de tipo de cambio de BCRPData."""
 
 import argparse
-import hashlib
 import re
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -111,7 +110,6 @@ def main():
         parser.error("La fecha inicial debe ser anterior o igual a la final.")
 
     run_id = str(uuid4())
-    started_at = utc_now()
     ingestion_date = datetime.now(timezone.utc).date().isoformat()
     root = (
         args.output_root / "bcrpdata" / "exchange_rates"
@@ -130,32 +128,6 @@ def main():
         data, metadata = fetch_json(url, path, run_id, "bcrpdata")
         controls = validate_response(data, start, end)
 
-        files = {}
-        for filename in ("response.json", "response.json.metadata.json"):
-            content = (root / filename).read_bytes()
-            files[filename] = {
-                "sha256": hashlib.sha256(content).hexdigest(),
-                "size_bytes": len(content),
-            }
-        files["response.json"].update({
-            "row_count": controls["observation_count"],
-            "metadata_file": "response.json.metadata.json",
-        })
-
-        write_json(root / "manifest.json", {
-            "schema_version": 1,
-            "source_system": "bcrpdata",
-            "series_code": SERIES,
-            "ingestion_run_id": run_id,
-            "ingestion_date": ingestion_date,
-            "requested_start_date": start.isoformat(),
-            "requested_end_date": end.isoformat(),
-            "extraction_started_at": started_at,
-            "extraction_finished_at": utc_now(),
-            "controls": controls,
-            "files": files,
-            "status": "completed",
-        })
     except BaseException as error:
         write_json(root / "failure.json", {
             "status": "failed",
@@ -170,7 +142,7 @@ def main():
     print(f"PASS: {controls['observation_count']} fechas únicas dentro del intervalo.")
     print(f"TASAS DISPONIBLES: {controls['available_count']}")
     print(f"NO DISPONIBLES: {controls['unavailable_count']}")
-    print(f"MANIFIESTO: {root / 'manifest.json'}")
+    print(f"RESPUESTA Y METADATOS: {root}")
     print("ALCANCE: extracción local; publicación en Bronze pendiente.")
 
 

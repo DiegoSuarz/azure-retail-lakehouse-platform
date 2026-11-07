@@ -23,7 +23,7 @@ en ventanas de uso de Azure para controlar los costos.
 | M7 | Transformaciones PySpark y tablas Delta en Silver | Completado |
 | M8 | CDC real de productos, incrementales e idempotencia | Completado |
 | M9 | Modelo estrella y capa Gold | Implementado y verificado; cierre pendiente |
-| M10 | Dimensiones con SCD tipo 1 y tipo 2 | Pendiente |
+| M10 | Dimensiones con SCD tipo 1 y tipo 2 | Implementado y verificado; cierre pendiente |
 | M11 | MERGE, evolución de esquemas, time travel y retención | Pendiente |
 | M12 | Publicación Parquet y vistas en Synapse Serverless | Pendiente |
 | M13 | Modelo analítico y visualizaciones en Power BI Desktop | Pendiente |
@@ -122,7 +122,18 @@ La ejecución aceptada es 953a045c-f46b-4f1a-bb98-5003f14b6930.
 El cómputo quedó detenido y el NAT Gateway y su IP pública eliminados.
 M9 está integrado en main mediante el PR #17, commit 8bf7398.
 La revisión del costo definitivo permanece pendiente.
-El siguiente módulo previsto es M10: dimensiones con SCD tipo 1 y tipo 2.
+M10 incorpora dimensiones SCD de productos y clientes,
+con cambios tipo 1 y tipo 2 verificados localmente y en Azure.
+La demostración Azure utiliza entradas sintéticas sobre copias de M9.
+La ejecución aceptada es 1e03e712-4ccf-4c81-a2c6-f6d258b5e894.
+Productos y clientes alcanzaron 64 y 503 filas, respectivamente,
+en versión Delta 1. La repetición no generó cambios ni otro commit.
+Las referencias de las 5862 líneas de ventas heredadas se conservaron.
+El cómputo quedó detenido y el NAT Gateway y su IP pública eliminados.
+El cierre de M10 está preparado en feature/m10-scd-dimensions.
+La integración en main y la revisión del costo definitivo están pendientes.
+El siguiente módulo previsto es M11: fundamentos adicionales de Delta,
+evolución de esquemas, time travel y retención.
 La publicación en Synapse y el consumo mediante Power BI siguen pendientes.
 
 Las comprobaciones de disponibilidad y costos pendientes de M0
@@ -138,3 +149,4 @@ se resolverán antes de los despliegues correspondientes.
 - [M7 — Transformaciones Silver](modules/m7-silver-transformation.md)
 - [M8 — CDC real, incrementales e idempotencia](modules/m8-incremental-processing.md)
 - [M9 — Modelo estrella y capa Gold](modules/m9-gold-star-schema.md)
+- [M10 — Dimensiones SCD](modules/m10-scd-dimensions.md)

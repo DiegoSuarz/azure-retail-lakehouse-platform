@@ -9,9 +9,10 @@ La lógica utilizará DataFrames y rutas configurables.
 La configuración de sesión permanecerá separada.
 
 La carga SQL utilizará rutas explícitas de Bronze ya aceptadas en M5.
-No se ampliará el lector de manifiestos en M7.
-Los manifiestos existentes se conservan; su limpieza se abordará
-después del primer release con Gold.
+Los ejecutores actuales no requieren manifiestos de entrada.
+Las evidencias históricas se conservan; para utilizar entradas antiguas
+con los lectores nuevos se preparan copias compatibles sin manifiestos.
+Las tablas Delta aceptadas no se reconstruyen por esta limpieza.
 
 ## Entorno local comprobado
 

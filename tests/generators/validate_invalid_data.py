@@ -1,7 +1,7 @@
 """Comprueba las anomalías deliberadas de los escenarios S13–S20."""
 
 import csv
-import hashlib
+import argparse
 import json
 from decimal import Decimal
 from pathlib import Path
@@ -29,13 +29,19 @@ def read_events(path):
 
 
 def main():
+    global ROOT, INITIAL
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--data-dir", type=Path, default=ROOT)
+    parser.add_argument("--initial-dir", type=Path, default=INITIAL)
+    args = parser.parse_args()
+    ROOT, INITIAL = args.data_dir, args.initial_dir
     expected_reasons = {
         "S13": "event_id_conflict",
         "S14": "entity_key_sequence_conflict",
         "S15": "invalid_status_transition",
         "S16": "missing_product_reference",
         "S17": "discount_exceeds_gross",
-        "S18": "manifest_hash_mismatch",
+        "S18": "malformed_jsonl",
         "S19": "existing_order_content_conflict",
         "S20": "stable_attribute_changed",
     }
@@ -95,41 +101,34 @@ def main():
         )
 
         directory = ROOT / case["directory"]
-        manifest = json.loads(
-            (directory / "manifest.json").read_text(encoding="utf-8")
-        )
-        require(manifest["schema_version"] == 1, f"Versión de {scenario}")
-        require(
-            manifest["batch_id"] == f"invalid_{scenario.lower()}",
-            f"Identidad de {scenario}",
-        )
         expected_files = (
             {"orders.csv", "order_items.csv"}
             if scenario in {"S16", "S17", "S19"}
             else {"changes.jsonl"}
         )
-        require(set(manifest["files"]) == expected_files, f"Archivos de {scenario}")
-
-        contents = {}
-        hash_mismatches = []
-        for filename, metadata in manifest["files"].items():
-            path = directory / filename
-            rows = (
-                read_csv(path) if filename.endswith(".csv")
-                else read_events(path)
-            )
-            require(len(rows) == metadata["row_count"], f"Conteo {scenario}/{filename}")
-            digest = hashlib.sha256(path.read_bytes()).hexdigest()
-            if digest != metadata["sha256"]:
-                hash_mismatches.append(filename)
-            contents[filename] = rows
-
         require(
-            hash_mismatches == (["changes.jsonl"] if scenario == "S18" else []),
-            f"Integridad de transporte de {scenario}",
+            {path.name for path in directory.iterdir()} == expected_files,
+            f"Archivos de {scenario}",
         )
 
-        if scenario in {"S13", "S14", "S15", "S18", "S20"}:
+        if scenario == "S18":
+            try:
+                read_events(directory / "changes.jsonl")
+            except json.JSONDecodeError:
+                print("PASS: S18 — JSONL mal formado confirmado.")
+                continue
+            raise SystemExit("FAIL: S18 debe contener JSONL mal formado")
+
+        contents = {
+            filename: (
+                read_csv(directory / filename)
+                if filename.endswith(".csv")
+                else read_events(directory / filename)
+            )
+            for filename in expected_files
+        }
+
+        if scenario in {"S13", "S14", "S15", "S20"}:
             require(len(contents["changes.jsonl"]) == 1, f"Evento único de {scenario}")
             event = contents["changes.jsonl"][0]
 
@@ -176,12 +175,6 @@ def main():
                 > int(row["quantity"]) * Decimal(row["unit_price"])
             ]
             require(len(bad_lines) == 1, "S17 debe tener un descuento excesivo")
-
-        elif scenario == "S18":
-            require(
-                event == initial_customer_event,
-                "S18 debe conservar el evento y alterar solo el hash declarado",
-            )
 
         elif scenario == "S19":
             repeated_orders = contents["orders.csv"]

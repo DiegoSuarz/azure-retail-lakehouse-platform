@@ -72,9 +72,16 @@ Desde la raíz del repositorio, con el entorno virtual activo:
 2. Identificar la ruta del nuevo report.json mostrada en la salida.
 3. Ejecutar python -m transformations.gold.validate_local --report RUTA_DEL_NUEVO_REPORT_JSON
 
-El constructor utiliza por defecto:
-- Inventario: data/validation/gold_initial_inputs.json.
-- Carpeta de salida: data/validation/gold.
+Las entradas se declaran en INPUT_TABLES dentro de
+transformations/gold/run_local.py, con rutas relativas al repositorio,
+versiones Delta y conteos esperados. Para utilizar otras entradas locales,
+se debe actualizar ese bloque antes de ejecutar.
+
+No se requiere un manifiesto de entrada.
+El lector comprueba la existencia de las tablas y reconcilia sus conteos.
+El informe de ejecución registra las rutas, versiones y conteos utilizados.
+
+La carpeta de salida predeterminada es data/validation/gold.
 
 Cada construcción crea una carpeta nueva y no sobrescribe tablas.
 La escritura de las siete tablas no es una transacción conjunta.

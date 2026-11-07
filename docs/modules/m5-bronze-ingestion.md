@@ -6,7 +6,9 @@ Se incorporaron a Bronze la carga inicial de SQL Server,
 cuatro lotes sintéticos incrementales y las respuestas de
 DummyJSON y BCRPData.
 
-Las cargas incluyen manifiestos y comprobaciones de integridad.
+Las cargas históricas incluyeron manifiestos y controles de integridad.
+El flujo actual de extracción inicial SQL Server prescinde del manifiesto;
+los flujos incremental y API se revisan por separado.
 La configuración de ADF se exportó y quedó versionada.
 
 ## Servicios y herramientas utilizados
@@ -84,8 +86,13 @@ Los controles comerciales coinciden con M2:
 Una descarga adicional confirmó igualdad byte por byte de los Parquet cloud.
 El manifiesto se publicó sin sobrescritura y también se verificó.
 
-La aceptación y publicación del manifiesto utilizaron scripts y CLI.
-El pipeline ADF todavía no automatiza esas operaciones.
+La aceptación histórica y publicación del manifiesto utilizaron scripts
+y CLI. Esa evidencia se conserva.
+
+En el flujo actual no se genera ni publica un manifiesto inicial.
+Se conserva el validador Parquet; los controles de ADF se revisan
+manualmente, junto con la comparación cloud/local.
+El pipeline no automatiza la aceptación completa.
 
 Las capturas no detectan cambios transitorios posteriormente revertidos.
 La coherencia depende también de mantener la ventana sin escrituras.
@@ -199,7 +206,8 @@ compartidos para continuar los siguientes módulos.
 - Los conteos iguales no garantizan valores iguales.
 - Bronze conserva la procedencia y permite reprocesar los datos.
 - Los hashes comprueban integridad; no sustituyen reglas de negocio.
-- Un manifiesto publicado al final identifica una entrega completa.
+- El flujo histórico utilizó manifiestos; el actual exige revisar
+  todos los archivos esperados y el informe de ejecución.
 - Los datos originales y sus metadatos tienen estructuras diferentes.
 - Un valor no disponible no equivale a una tasa de cero.
 - La ingesta de eventos y su aplicación son etapas distintas.

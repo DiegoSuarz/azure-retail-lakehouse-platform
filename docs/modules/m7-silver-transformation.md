@@ -109,8 +109,10 @@ La ejecución no está automatizada mediante ADF ni Jobs.
 Los controles de M6 no se integraron como un flujo automático
 de clasificación y publicación de cuarentena en estos notebooks.
 
-Los manifiestos y lanzadores locales existentes se conservan.
-Su limpieza se realizará después del primer release con Gold.
+La limpieza posterior a Gold retiró las dependencias activas de
+manifiestos en los ejecutores locales. Se conservan las tablas Delta
+aceptadas y las evidencias históricas. Los lectores nuevos requieren
+entradas compatibles sin manifiestos.
 
 ## Operación y costos
 

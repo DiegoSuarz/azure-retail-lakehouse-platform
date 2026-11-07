@@ -1,78 +1,53 @@
-# Manifiesto de extracción inicial
+# Aceptación de la extracción inicial
 
-## Objetivo
+## Flujo actual sin manifiesto
 
-Identificar una extracción de SQL Server y registrar la evidencia
-necesaria para aceptarla como entrada de Bronze.
+La extracción inicial SQL Server no requiere generar ni publicar
+manifest.json. Se conserva esta ruta documental para mantener enlaces.
 
-## Ubicación
+1. Capturar el origen antes de la extracción.
+2. Mantener una ventana sin escrituras durante extracción y validación.
+3. Ejecutar pl_ingest_sqlserver_initial y revisar sus cinco copias.
+4. Capturar el origen después de la extracción.
+5. Descargar los Parquet y ejecutar validate_initial_parquet.py.
+6. Comprobar que los archivos cloud coinciden con los validados.
 
-Dentro del contenedor bronze:
+## Revisión manual de ADF
 
-    sqlserver/techretail_oltp/initial/run_id=<ingestion_run_id>/manifest.json
+El operador comprobará y conservará evidencia de:
 
-## Generación
+- RunId, pipeline y cinco actividades Copy con estado Succeeded.
+- Inicio y fin reales en UTC.
+- Capturas del origen que delimiten la extracción.
+- Ventana sin escrituras confirmada.
+- Consistencia de las cinco copias con resultado Verified.
+- Filas leídas, filas copiadas y archivos escritos coincidentes
+  con el origen y los Parquet validados.
 
-El manifiesto se generará mediante un script local de Python,
-después de descargar y validar los archivos Parquet.
+Estas comprobaciones ya no se automatizan mediante el constructor
+del manifiesto. No deben sustituirse por métricas o fechas inventadas.
 
-La publicación se realizará mediante Azure CLI con autenticación
-de Microsoft Entra, sin utilizar claves de almacenamiento.
+## Validación automática de los datos
 
-El pipeline realiza la copia. La aceptación y publicación del
-manifiesto serán pasos manuales asistidos por scripts en esta etapa.
+tests/ingestion/validate_initial_parquet.py compara las referencias
+del origen antes y después, columnas, tipos, claves, todos los valores
+y relaciones. Genera un informe local solo si sus controles pasan.
 
-## Campos obligatorios
+Su informe no acredita por sí solo la revisión manual de ADF
+ni la igualdad entre archivos cloud y descargados.
 
-| Campo | Contenido |
-|---|---|
-| schema_version | Entero 1 |
-| ingestion_run_id | RunId del pipeline |
-| source_system | sqlserver |
-| source_database | TechRetail_OLTP |
-| pipeline_name | pl_ingest_sqlserver_initial |
-| synthetic_cutoff_exclusive | 2026-10-01T00:00:00.000Z |
-| extraction_started_at | Inicio real del pipeline en UTC |
-| extraction_finished_at | Fin real del pipeline en UTC |
-| validated_at | Fecha de validación en UTC |
-| consistency | Método y controles de estabilidad del origen |
-| entities | Archivos y conteos de las cinco tablas |
-| reconciliation | Resultados de los controles |
-| status | completed, únicamente después de validar |
-
-Cada entidad registrará source_row_count, copy_rows_read,
-copy_rows_copied y destination_row_count.
-
-Cada archivo registrará su ruta relativa a la raíz de ejecución,
-size_bytes y sha256. Se utilizarán los nombres reales generados por ADF.
-
-## Consistencia y reconciliación
-
-Se mantendrá una ventana sin escrituras durante extracción y validación.
-
-Se comparará el contenido del origen antes y después de la copia,
-mediante una representación determinista ordenada por clave primaria.
-
-La igualdad de esas referencias detecta diferencias entre ambos
-momentos, no demuestra por sí sola ausencia de modificaciones transitorias.
-
-Los Parquet se compararán por clave contra el origen y se validarán
-columnas, tipos compatibles, duplicados, relaciones, estados,
-importes decimales y unidades.
-
-Las métricas de Copy y las fechas de ejecución se obtendrán de ADF.
-No se sustituirán por valores esperados ni por fechas inventadas.
+Las capturas no detectan cambios transitorios posteriormente revertidos.
+La consistencia depende también de mantener la ventana sin escrituras.
 
 ## Finalización
 
-Solo se generará status completed cuando las cinco entidades
-superen todas las comprobaciones.
+La ejecución se acepta únicamente cuando pasan la validación de datos,
+la revisión manual de ADF y la comparación cloud/local.
+Las ejecuciones parciales o fallidas no se utilizan como entrada Silver.
+La existencia de archivos o el estado Succeeded por sí solos no bastan.
 
-Una copia Succeeded sin manifiesto validado seguirá pendiente
-de aceptación. Los fallos se conservarán en un informe local separado.
+## Evidencia histórica
 
-Antes de subir el manifiesto se comprobará que los archivos cloud
-coincidan con los archivos descargados y validados.
-
-No se sobrescribirá un manifiesto ya publicado.
-La carga no se utilizará en Silver hasta finalizar su aceptación.
+La ejecución 89d277f4-ddee-49a2-9d9f-588efacf9788 utilizó el procedimiento
+anterior con manifiesto publicado en Bronze. Esa evidencia se conserva;
+las ejecuciones futuras no requieren generar otro manifiesto.

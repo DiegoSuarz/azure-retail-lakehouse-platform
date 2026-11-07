@@ -3,7 +3,7 @@
 ## Objetivo
 
 Conservar respuestas originales de DummyJSON y BCRPData en Bronze,
-con metadatos de procedencia y manifiestos de extracción.
+con metadatos de procedencia por respuesta, sin manifiesto global.
 
 La extracción utiliza Python y la publicación Azure CLI.
 ADF todavía no coordina estas extracciones.
@@ -38,7 +38,8 @@ Una espera Retry-After superior a 60 segundos detiene la extracción
 para retomarla después, respetando el plazo indicado.
 
 Una extracción fallida conserva las respuestas guardadas y failure.json.
-No genera un manifiesto completed.
+El lector bloquea las carpetas que contienen failure.json.
+La aceptación se determina validando procedencia y reglas de cada fuente.
 
 ## Validaciones
 
@@ -72,7 +73,8 @@ Se comprueban identidad, rutas, inventario, tamaños y hashes.
 Una copia temporal conserva los bytes preparados para publicar.
 
 Los archivos se suben sin sobrescritura y se verifican mediante descarga.
-El manifiesto se publica al final.
+Se publican únicamente respuestas y metadatos por respuesta.
+La publicación no es atómica; revisar el informe antes de consumirla.
 El informe registra el estado y los resultados por archivo.
 
 Si falla, revisar el informe antes de repetir.
@@ -83,7 +85,8 @@ transferencia cuando corresponda y capacidad por los archivos conservados.
 
 ## Evidencias
 
-Extracciones del 2026-10-11, publicadas y verificadas:
+Extracciones históricas del 2026-10-11, publicadas y verificadas
+mediante el procedimiento anterior con manifiestos:
 
 | Fuente | Control | Resultado |
 |---|---|---:|
@@ -116,3 +119,20 @@ Los datos e informes locales permanecen fuera de Git.
 - Normalizar las respuestas en Silver.
 - Definir el tratamiento analítico de fechas sin cotización.
 - Incorporar posteriormente la coordinación mediante ADF.
+
+## Verificación del flujo sin manifiesto
+
+Siete pruebas de reglas, integridad e informes API superadas.
+Los dos extractores se probaron con HTTP simulado a partir de respuestas
+históricas: 38 productos y 195 observaciones aceptadas.
+La preparación del publicador verificó 20 archivos de DummyJSON y dos
+de BCRPData, sin publicar en Azure.
+
+Las respuestas históricas permanecen intactas.
+Para usarlas con el lector nuevo, preparar copias que excluyan solamente
+manifest.json y conservar la estructura de rutas y los metadatos.
+
+La paginación de DummyJSON se contrasta con las respuestas y solicitudes.
+El intervalo BCRPData se obtiene de la URL conservada.
+No existe un estado global completed ni reconciliación contra un manifiesto.
+La validación no demuestra cobertura de todas las fechas publicadas por BCRP.

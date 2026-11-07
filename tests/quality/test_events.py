@@ -62,20 +62,7 @@ class EventQualityTests(unittest.TestCase):
             for event in events
         ).encode("utf-8")
         (directory / "changes.jsonl").write_bytes(payload)
-        (directory / "manifest.json").write_text(
-            json.dumps({
-                "schema_version": 1,
-                "batch_id": "event_test",
-                "created_at": "2026-10-02T00:00:00.000Z",
-                "files": {
-                    "changes.jsonl": {
-                        "row_count": len(events),
-                        "sha256": hashlib.sha256(payload).hexdigest(),
-                    }
-                },
-            }),
-            encoding="utf-8",
-        )
+
 
     def test_invalid_scenarios_preserve_evidence(self):
         cases = (

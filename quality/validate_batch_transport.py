@@ -1,11 +1,9 @@
-"""Valida DQ001–DQ004 sin aplicar reglas de negocio ni modificar entradas."""
+"""Valida identidad, archivos y estructura sin modificar entradas."""
 
 import argparse
 import csv
-import hashlib
 import io
 import json
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -84,24 +82,16 @@ def parse_file(filename, payload):
         raise TransportError("DQ004", str(error), filename) from error
 
 
-def validate_transport(directory, expected_batch_id=None):
-    manifest_path = directory / "manifest.json"
-    check(manifest_path.is_file(), "DQ001", "Manifiesto ausente")
-    try:
-        manifest = parse_json(manifest_path.read_bytes())
-    except (UnicodeError, ValueError) as error:
-        raise TransportError("DQ001", "Manifiesto JSON inválido") from error
-
-    check(isinstance(manifest, dict), "DQ001", "Manifiesto no es un objeto")
+def read_batch(directory, expected_batch_id=None, expected_files=None):
+    """Lee y valida un lote sin manifiesto; devuelve identidad, bytes y conteos."""
+    directory = Path(directory)
     check(
-        type(manifest.get("schema_version")) is int
-        and manifest["schema_version"] == 1,
-        "DQ001", "Versión de contrato incompatible",
+        directory.is_dir() and not directory.is_symlink(),
+        "DQ002", "Directorio de lote ausente o enlace simbólico",
     )
-    batch_id = manifest.get("batch_id")
+    batch_id = directory.name
     check(
-        isinstance(batch_id, str) and bool(batch_id.strip())
-        and batch_id not in {".", ".."}
+        bool(batch_id.strip()) and batch_id not in {".", ".."}
         and "/" not in batch_id and "\\" not in batch_id,
         "DQ001", "Identidad de lote inválida",
     )
@@ -111,72 +101,46 @@ def validate_transport(directory, expected_batch_id=None):
             "DQ001", "Identidad diferente de la esperada",
         )
 
-    created = manifest.get("created_at")
+    paths = list(directory.iterdir())
+    filenames = {path.name for path in paths}
     check(
-        isinstance(created, str)
-        and re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z", created),
-        "DQ001", "created_at debe ser UTC con milisegundos y sufijo Z",
-    )
-    try:
-        datetime.fromisoformat(created.replace("Z", "+00:00"))
-    except ValueError as error:
-        raise TransportError("DQ001", "created_at contiene una fecha inválida") from error
-
-    files = manifest.get("files")
-    check(
-        isinstance(files, dict) and bool(files) and set(files) <= ALLOWED,
-        "DQ001", "Inventario vacío o archivos no admitidos",
+        bool(filenames) and filenames <= ALLOWED,
+        "DQ002", "Lote vacío o archivos no admitidos",
     )
     check(
-        ("orders.csv" in files) == ("order_items.csv" in files),
-        "DQ001", "Pedidos y líneas deben entregarse juntos",
+        ("orders.csv" in filenames) == ("order_items.csv" in filenames),
+        "DQ002", "Pedidos y líneas deben entregarse juntos",
     )
-    actual = {path.name for path in directory.iterdir()}
-    check(
-        actual == set(files) | {"manifest.json"},
-        "DQ002", "Archivos ausentes o adicionales",
-    )
+    if expected_files is not None:
+        required = set(expected_files)
+        check(
+            bool(required) and required <= ALLOWED,
+            "DQ001", "Conjunto esperado de archivos incompatible",
+        )
+        check(
+            filenames == required,
+            "DQ002", "Archivos diferentes de los esperados",
+        )
 
     payloads = {}
-    for filename, metadata in files.items():
-        check(isinstance(metadata, dict), "DQ001", "Metadatos inválidos", filename)
-        expected_hash = metadata.get("sha256")
-        check(
-            isinstance(expected_hash, str)
-            and re.fullmatch(r"[0-9a-f]{64}", expected_hash),
-            "DQ002", "SHA-256 declarado inválido", filename,
-        )
-        expected_count = metadata.get("row_count")
-        check(
-            type(expected_count) is int and expected_count >= 0,
-            "DQ003", "Conteo declarado inválido", filename,
-        )
-        path = directory / filename
+    counts = {}
+    for path in sorted(paths):
         check(
             path.is_file() and not path.is_symlink(),
-            "DQ002", "Archivo ausente o enlace simbólico", filename,
+            "DQ002", "Entrada no regular o enlace simbólico", path.name,
         )
         payload = path.read_bytes()
-        check(
-            hashlib.sha256(payload).hexdigest() == expected_hash,
-            "DQ002", "Hash diferente del manifiesto", filename,
-        )
-        if "size_bytes" in metadata:
-            check(
-                type(metadata["size_bytes"]) is int
-                and metadata["size_bytes"] == len(payload),
-                "DQ002", "Tamaño diferente del manifiesto", filename,
-            )
-        payloads[filename] = payload
+        counts[path.name] = parse_file(path.name, payload)
+        payloads[path.name] = payload
 
-    counts = {}
-    for filename, payload in payloads.items():
-        counts[filename] = parse_file(filename, payload)
-        check(
-            counts[filename] == files[filename]["row_count"],
-            "DQ003", "Conteo diferente del manifiesto", filename,
-        )
+    return batch_id, payloads, counts
 
+
+def validate_transport(directory, expected_batch_id=None, expected_files=None):
+    """Valida el lote sin manifiesto y devuelve identidad y conteos."""
+    batch_id, _, counts = read_batch(
+        directory, expected_batch_id, expected_files
+    )
     return batch_id, counts
 
 
@@ -239,7 +203,7 @@ def main():
     for error in report["errors"]:
         print(f"{error['code']}: {error['message']}")
     print(f"INFORME: {args.report}")
-    print("ALCANCE: integridad y estructura; reglas de negocio pendientes.")
+    print("ALCANCE: identidad, archivos y estructura; reglas de negocio pendientes.")
     return 0 if report["status"] == "transport_validated" else 1
 
 

@@ -1,14 +1,16 @@
 """Valida los archivos iniciales sin modificar los datos."""
 
 import csv
-import hashlib
-import json
+import argparse
 from collections import Counter
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 
-ROOT = Path("data/initial")
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--data-dir", type=Path, default=Path("data/initial"))
+args = parser.parse_args()
+ROOT = args.data_dir
 
 
 def require(condition, message):
@@ -20,19 +22,40 @@ def date(value):
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
 tables = {}
-
-for filename, metadata in manifest["files"].items():
-    path = ROOT / filename
-    require(
-        hashlib.sha256(path.read_bytes()).hexdigest() == metadata["sha256"],
-        f"Hash de {filename}",
-    )
-    with path.open(encoding="utf-8", newline="") as stream:
-        rows = list(csv.DictReader(stream))
-    require(len(rows) == metadata["row_count"], f"Conteo de {filename}")
-    tables[path.stem] = rows
+expected_counts = {
+    "categories": 6,
+    "products": 60,
+    "customers": 500,
+    "orders": 2000,
+    "order_items": None,
+}
+require(
+    {path.stem for path in ROOT.glob("*.csv")} == set(expected_counts),
+    "Conjunto de archivos CSV",
+)
+for name, expected_count in expected_counts.items():
+    with (ROOT / f"{name}.csv").open(
+        encoding="utf-8", newline=""
+    ) as stream:
+        reader = csv.DictReader(stream)
+        require(
+            reader.fieldnames
+            and len(reader.fieldnames) == len(set(reader.fieldnames)),
+            f"Cabecera válida: {name}",
+        )
+        rows = list(reader)
+        require(
+            all(
+                None not in row
+                and all(value is not None for value in row.values())
+                for row in rows
+            ),
+            f"Filas con estructura válida: {name}",
+        )
+    if expected_count is not None:
+        require(len(rows) == expected_count, f"Conteo: {name}")
+    tables[name] = rows
 
 require(
     set(tables) == {"categories", "products", "customers", "orders", "order_items"},
@@ -60,8 +83,8 @@ for name, field in [
     require(all(values), f"Valores presentes: {name}.{field}")
     require(len(values) == len(set(values)), f"Unicidad: {name}.{field}")
 
-cutoff = date(manifest["cutoff_exclusive"])
-start = date(manifest["period_start_inclusive"])
+cutoff = date("2026-10-01T00:00:00Z")
+start = date("2026-01-01T00:00:00Z")
 
 for name, rows in tables.items():
     for row in rows:
@@ -123,27 +146,12 @@ for row in tables["order_items"]:
 require(set(line_counts) == set(orders), "Todos los pedidos tienen líneas")
 require(all(1 <= count <= 5 for count in line_counts.values()), "Líneas por pedido")
 
-controls = manifest["controls"]
-require(
-    dict(Counter(row["status"] for row in orders.values()))
-    == controls["order_status_counts"],
-    "Conteos por estado",
-)
-
-for label, total in [
-    ("gross_amount_all_orders", gross_total),
-    ("discount_amount_all_orders", discount_total),
-    ("net_amount_all_orders", gross_total - discount_total),
-    ("net_amount_confirmed_orders", confirmed_net),
-]:
-    require(total == Decimal(controls[label]), f"Reconciliación: {label}")
-
-require(
-    confirmed_quantity == controls["quantity_confirmed_orders"],
-    "Unidades confirmadas",
-)
-
-print("PASS: hashes y conteos de los cinco archivos.")
+print("PASS: estructura y conteos de los cinco CSV.")
 print("PASS: claves, relaciones, fechas y reglas comerciales.")
 print("PASS: todos los pedidos tienen entre una y cinco líneas.")
-print("PASS: estados, importes y unidades reconciliados con el manifiesto.")
+print("Estados:", dict(Counter(row["status"] for row in orders.values())))
+print("Bruto PEN:", gross_total)
+print("Descuento PEN:", discount_total)
+print("Neto PEN:", gross_total - discount_total)
+print("Neto confirmado PEN:", confirmed_net)
+print("Unidades confirmadas:", confirmed_quantity)

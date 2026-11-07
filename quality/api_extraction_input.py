@@ -4,7 +4,7 @@ import hashlib
 import json
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -59,139 +59,122 @@ def utc_date(value, label):
 
 
 def read_extraction(directory):
-    root = Path(directory).resolve()
+    """Lee respuestas y procedencia sin manifiesto global."""
+    directory = Path(directory)
+    require(
+        directory.is_dir() and not directory.is_symlink(),
+        "DQ002", "Directorio ausente o enlace simbólico",
+    )
+    root = directory.resolve()
     try:
-        manifest = parse_json(
-            (root / "manifest.json").read_bytes(), "DQ001", "manifest.json"
-        )
-        require(isinstance(manifest, dict), "DQ001", "Manifiesto no objeto")
         require(
-            type(manifest.get("schema_version")) is int
-            and manifest["schema_version"] == 1,
-            "DQ001", "Versión incompatible",
+            root.name.startswith("run_id=")
+            and root.parent.name.startswith("ingestion_date="),
+            "DQ001", "Ruta de extracción incompatible",
         )
-        require(manifest.get("status") == "completed", "DQ001", "Extracción incompleta")
-        source = manifest.get("source_system")
-        require(
-            isinstance(source, str) and source in {"dummyjson", "bcrpdata"},
-            "DQ001", "Fuente incompatible",
-        )
-        run_id = manifest.get("ingestion_run_id")
+        run_id = root.name.removeprefix("run_id=")
         try:
-            require(isinstance(run_id, str), "DQ001", "RunId ausente")
-            UUID(run_id)
-            ingestion_date = date.fromisoformat(manifest["ingestion_date"])
-        except (ValueError, TypeError, KeyError) as error:
+            require(str(UUID(run_id)) == run_id, "DQ001", "RunId no canónico")
+            ingestion_date = date.fromisoformat(
+                root.parent.name.removeprefix("ingestion_date=")
+            )
+        except ValueError as error:
             raise ExtractionError("DQ001", "Identidad de extracción inválida") from error
 
-        require(root.name == f"run_id={run_id}", "DQ001", "RunId diferente de la carpeta")
-        require(
-            root.parent.name == f"ingestion_date={ingestion_date.isoformat()}",
-            "DQ001", "Fecha de ingesta diferente de la carpeta",
-        )
-        started = utc_date(manifest.get("extraction_started_at"), "inicio")
-        finished = utc_date(manifest.get("extraction_finished_at"), "fin")
-        require(started <= finished, "DQ001", "Intervalo de extracción invertido")
-        require(
-            ingestion_date == started.date(),
-            "DQ001", "Fecha de ingesta diferente del inicio UTC",
-        )
-
-        files = manifest.get("files")
-        require(isinstance(files, dict) and bool(files), "DQ002", "Inventario inválido")
         payloads = {}
-        for relative, metadata in files.items():
-            name = PurePosixPath(relative)
+        for path in sorted(root.rglob("*")):
+            require(not path.is_symlink(), "DQ002", "Enlace simbólico en extracción")
+            if path.is_dir():
+                continue
+            require(path.is_file(), "DQ002", "Entrada no regular")
+            relative = path.relative_to(root).as_posix()
             require(
-                bool(relative) and not name.is_absolute()
-                and ".." not in name.parts and "\\" not in relative
-                and name.as_posix() == relative and relative != "manifest.json",
-                "DQ002", f"Ruta incompatible: {relative}",
+                relative.endswith(".json")
+                and path.name not in {"manifest.json", "failure.json"},
+                "DQ002", f"Archivo no admitido: {relative}",
             )
-            path = root / relative
-            require(
-                path.resolve().is_relative_to(root)
-                and not path.is_symlink() and path.is_file(),
-                "DQ002", f"Archivo ausente o ruta incompatible: {relative}",
-            )
-            require(isinstance(metadata, dict), "DQ002", f"Metadatos inválidos: {relative}")
-            payload = path.read_bytes()
-            require(
-                hashlib.sha256(payload).hexdigest() == metadata.get("sha256"),
-                "DQ002", f"Hash diferente: {relative}",
-            )
-            require(
-                type(metadata.get("size_bytes")) is int
-                and len(payload) == metadata["size_bytes"],
-                "DQ002", f"Tamaño diferente: {relative}",
-            )
-            payloads[relative] = payload
+            payloads[relative] = path.read_bytes()
 
-        actual = {
-            path.relative_to(root).as_posix()
-            for path in root.rglob("*") if path.is_file()
-        }
-        require(actual == set(files) | {"manifest.json"}, "DQ002", "Inventario diferente")
-
+        require(bool(payloads), "DQ002", "Extracción vacía")
         documents = {
             name: parse_json(payload, "DQ004", name)
             for name, payload in payloads.items()
         }
-        responses = {}
-        expected_host = (
-            "dummyjson.com" if source == "dummyjson"
-            else "estadisticas.bcrp.gob.pe"
+        response_names = {
+            name for name in payloads if not name.endswith(".metadata.json")
+        }
+        require(bool(response_names), "DQ002", "Sin respuestas")
+        require(
+            set(payloads) == response_names | {
+                name + ".metadata.json" for name in response_names
+            },
+            "DQ002", "Respuestas o metadatos sin pareja",
         )
-        for name, metadata in files.items():
-            if name.endswith(".metadata.json"):
-                continue
-            sidecar = metadata.get("metadata_file")
+
+        source = None
+        responses = {}
+        for name in sorted(response_names):
+            provenance = documents[name + ".metadata.json"]
+            require(isinstance(provenance, dict), "DQ004", f"Metadatos inválidos: {name}")
+            current_source = provenance.get("source_system")
             require(
-                isinstance(sidecar, str) and sidecar == name + ".metadata.json"
-                and sidecar in documents,
-                "DQ002", f"Procedencia ausente: {name}",
+                isinstance(current_source, str)
+                and current_source in {"dummyjson", "bcrpdata"},
+                "DQ001", f"Fuente incompatible: {name}",
             )
-            provenance = documents[sidecar]
-            require(isinstance(provenance, dict), "DQ004", f"Procedencia inválida: {name}")
+            if source is None:
+                source = current_source
             require(
-                type(provenance.get("schema_version")) is int
+                current_source == source
+                and type(provenance.get("schema_version")) is int
                 and provenance["schema_version"] == 1
-                and provenance.get("source_system") == source
                 and provenance.get("ingestion_run_id") == run_id
                 and type(provenance.get("http_status")) is int
                 and provenance["http_status"] == 200,
                 "DQ001", f"Identidad o estado HTTP incompatible: {name}",
             )
+            payload = payloads[name]
             require(
-                provenance.get("payload_sha256") == metadata["sha256"]
+                provenance.get("payload_sha256")
+                == hashlib.sha256(payload).hexdigest()
                 and type(provenance.get("size_bytes")) is int
-                and provenance["size_bytes"] == metadata["size_bytes"],
-                "DQ002", f"Procedencia diferente del contenido: {name}",
+                and provenance["size_bytes"] == len(payload),
+                "DQ002", f"Contenido diferente de su procedencia: {name}",
             )
             extracted = utc_date(provenance.get("extracted_at"), name)
             require(
-                started <= extracted <= finished,
-                "DQ001", f"Fecha de respuesta fuera de la extracción: {name}",
+                extracted.date() >= ingestion_date,
+                "DQ001", f"Respuesta anterior a la fecha de ingesta: {name}",
             )
             url = provenance.get("request_url")
             require(isinstance(url, str), "DQ001", f"URL ausente: {name}")
             parsed = urlparse(url)
+            expected_host = (
+                "dummyjson.com" if source == "dummyjson"
+                else "estadisticas.bcrp.gob.pe"
+            )
             require(
                 parsed.scheme == "https" and parsed.hostname == expected_host
                 and parsed.username is None and parsed.password is None,
-                "DQ001", f"URL de procedencia incompatible: {name}",
+                "DQ001", f"URL incompatible: {name}",
             )
             responses[name] = documents[name]
 
-        referenced = {
-            metadata["metadata_file"]
-            for metadata in files.values()
-            if isinstance(metadata, dict) and "metadata_file" in metadata
-        }
-        require(
-            referenced == {name for name in files if name.endswith(".metadata.json")},
-            "DQ002", "Metadatos adicionales sin respuesta asociada",
+        suffix = (
+            ("dummyjson", "products")
+            if source == "dummyjson"
+            else ("bcrpdata", "exchange_rates", "series_code=pd04638pd")
         )
-        return manifest, responses, payloads
+        prefix = root.parent.parent
+        require(
+            tuple(prefix.parts[-len(suffix):]) == suffix,
+            "DQ001", "Ruta diferente de la fuente",
+        )
+        extraction = {
+            "source_system": source,
+            "ingestion_run_id": run_id,
+            "ingestion_date": ingestion_date.isoformat(),
+        }
+        return extraction, responses, payloads
     except OSError as error:
         raise ExtractionError("DQ002", f"No se pudo leer la extracción: {error}") from error
