@@ -130,8 +130,8 @@ Productos y clientes alcanzaron 64 y 503 filas, respectivamente,
 en versión Delta 1. La repetición no generó cambios ni otro commit.
 Las referencias de las 5862 líneas de ventas heredadas se conservaron.
 El cómputo quedó detenido y el NAT Gateway y su IP pública eliminados.
-El cierre de M10 está preparado en feature/m10-scd-dimensions.
-La integración en main y la revisión del costo definitivo están pendientes.
+M10 está integrado en main mediante el PR #19, commit 463518c.
+La revisión del costo definitivo permanece pendiente.
 El siguiente módulo previsto es M11: fundamentos adicionales de Delta,
 evolución de esquemas, time travel y retención.
 La publicación en Synapse y el consumo mediante Power BI siguen pendientes.

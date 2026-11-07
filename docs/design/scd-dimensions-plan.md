@@ -153,7 +153,6 @@ Evidencia en [Ejecución Azure](scd-azure-execution.md).
 
 ## Pendientes
 
-- Integrar los cambios y el registro de cierre de M10 en main.
 - Revisar el costo definitivo de la ejecución.
 
 ## Estado

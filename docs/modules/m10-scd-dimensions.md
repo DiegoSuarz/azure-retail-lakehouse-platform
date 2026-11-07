@@ -166,7 +166,9 @@ Los fallos parciales y las entradas antiguas requieren revisión manual.
 ## Estado de cierre
 
 Implementación y comprobaciones locales y Azure documentadas.
-Registro de cierre preparado en feature/m10-scd-dimensions.
+M10 integrado en main mediante el
+[PR #19](https://github.com/DiegoSuarz/azure-retail-lakehouse-platform/pull/19),
+commit 463518c.
 
-Integración en main y revisión del costo definitivo pendientes.
+La revisión del costo definitivo permanece pendiente.
 El siguiente módulo previsto es M11.

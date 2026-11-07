@@ -128,4 +128,6 @@ La revisión del costo definitivo queda pendiente.
 ## Estado
 
 Demostración SCD en Azure completada y verificada.
-Pendientes el cierre general de M10 y su integración en main.
+El registro de cierre de M10 está integrado en main
+mediante el PR #19, commit 463518c.
+La revisión del costo definitivo permanece pendiente.
