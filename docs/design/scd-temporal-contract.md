@@ -160,5 +160,6 @@ Contrato temporal adaptado al flujo simplificado.
 Ejecutor, preparación SCD y escritura Delta comprobados localmente.
 Se verificaron controles del historial, lotes consecutivos y entradas repetidas.
 La evidencia se conserva en scd-local-execution.md.
-La ejecución en Azure permanece pendiente.
+La demostración en Azure fue completada con entradas sintéticas
+sobre copias separadas de M9; evidencia en scd-azure-execution.md.
 Este documento complementa scd-dimensions-plan.md.

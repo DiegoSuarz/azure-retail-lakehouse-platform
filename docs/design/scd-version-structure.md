@@ -144,4 +144,6 @@ Lectura y aplicación Delta implementadas en scd_storage.py.
 Ejecutor integrado en run_scd_local.py.
 Dos lotes consecutivos por dimensión y repeticiones sin cambios
 verificados localmente; evidencia en scd-local-execution.md.
-La ejecución en Azure permanece pendiente.
+La demostración en Azure fue completada y verificada.
+Se conservaron las claves heredadas y la repetición no generó otro commit.
+Evidencia en scd-azure-execution.md.

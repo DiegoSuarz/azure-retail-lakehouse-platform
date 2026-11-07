@@ -148,9 +148,11 @@ o agregarlas antes de unir, para evitar multiplicar líneas e importes.
 build_product_catalog_mapping permanece como constructor inicial de M9.
 No se utiliza sobre una dimensión con varias versiones por product_id.
 
+La demostración en Azure fue completada y verificada.
+Evidencia en [Ejecución Azure](scd-azure-execution.md).
+
 ## Pendientes
 
-- Ejecutar y verificar el flujo en Azure.
 - Consolidar las evidencias y el cierre de M10.
 
 ## Estado

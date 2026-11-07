@@ -116,4 +116,6 @@ automáticamente sobre un estado posterior.
 Flujo simplificado comprobado localmente con dos lotes consecutivos
 por dimensión y repeticiones sin cambios.
 
-La ejecución y validación de este flujo en Azure permanecen pendientes.
+La demostración posterior en Azure fue completada.
+Sus resultados y límites se documentan en
+[Ejecución Azure](scd-azure-execution.md).
