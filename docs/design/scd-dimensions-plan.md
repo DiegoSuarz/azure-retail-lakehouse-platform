@@ -153,11 +153,15 @@ Evidencia en [Ejecución Azure](scd-azure-execution.md).
 
 ## Pendientes
 
-- Consolidar las evidencias y el cierre de M10.
+- Integrar los cambios y el registro de cierre de M10 en main.
+- Revisar el costo definitivo de la ejecución.
 
 ## Estado
 
 Inicialización local y funciones de transformación y ventas verificadas.
 Flujo integrado probado con datos sintéticos para productos y clientes.
-Ambos destinos de demostración alcanzaron la versión Delta 2 con siete filas.
+Ambos destinos de demostración locales alcanzaron la versión Delta 2
+con siete filas.
+En Azure, las copias de productos y clientes alcanzaron 64 y 503 filas
+en versión Delta 1; la repetición conservó sus valores y auditoría.
 Las tablas Gold aceptadas de M9 permanecen sin modificaciones.
