@@ -139,3 +139,5 @@ y de otros proyectos en la suscripción.
 
 Las decisiones sobre nuevas ejecuciones considerarán tanto
 el consumo reportado como los cargos todavía pendientes de aparecer.
+
+Corte provisional de consumo: [7 de noviembre de 2026](cost-review-2026-11-07.md).
